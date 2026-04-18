@@ -1,33 +1,30 @@
 import type { FC } from 'react'
-import { useState } from 'react'
-import {
-  RiDeleteBinLine,
-  RiEditLine,
-} from '@remixicon/react'
-import { useDebounceFn } from 'ahooks'
-import { useContext } from 'use-context-selector'
-import { useTranslation } from 'react-i18next'
-import { useStore as useTagStore } from './store'
-import Confirm from '@/app/components/base/confirm'
-import cn from '@/utils/classnames'
 import type { Tag } from '@/app/components/base/tag-management/constant'
-import { ToastContext } from '@/app/components/base/toast'
 import {
-  deleteTag,
-  updateTag,
-} from '@/service/tag'
+  AlertDialog,
+  AlertDialogActions,
+  AlertDialogCancelButton,
+  AlertDialogConfirmButton,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from '@langgenius/dify-ui/alert-dialog'
+import { cn } from '@langgenius/dify-ui/cn'
+import { toast } from '@langgenius/dify-ui/toast'
+import { useDebounceFn } from 'ahooks'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import Tooltip from '@/app/components/base/tooltip'
+import { deleteTag, updateTag } from '@/service/tag'
+import { useStore as useTagStore } from './store'
 
 type TagItemEditorProps = {
   tag: Tag
 }
-const TagItemEditor: FC<TagItemEditorProps> = ({
-  tag,
-}) => {
+const TagItemEditor: FC<TagItemEditorProps> = ({ tag }) => {
   const { t } = useTranslation()
-  const { notify } = useContext(ToastContext)
   const tagList = useTagStore(s => s.tagList)
   const setTagList = useTagStore(s => s.setTagList)
-
   const [isEditing, setIsEditing] = useState(false)
   const [name, setName] = useState(tag.name)
   const editTag = async (tagID: string, name: string) => {
@@ -36,7 +33,7 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
       return
     }
     if (!name) {
-      notify({ type: 'error', message: 'tag name is empty' })
+      toast.error('tag name is empty')
       setName(tag.name)
       setIsEditing(false)
       return
@@ -56,11 +53,11 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
       ])
       setIsEditing(false)
       await updateTag(tagID, name)
-      notify({ type: 'success', message: t('common.actionMsg.modifiedSuccessfully') })
+      toast.success(t('actionMsg.modifiedSuccessfully', { ns: 'common' }))
       setName(name)
     }
-    catch (e: any) {
-      notify({ type: 'error', message: t('common.actionMsg.modifiedUnsuccessfully') })
+    catch {
+      toast.error(t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }))
       setName(tag.name)
       const recoverList = tagList.map((tag) => {
         if (tag.id === tagID) {
@@ -78,74 +75,86 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
     }
   }
   const [showRemoveModal, setShowRemoveModal] = useState(false)
-  const [pending, setPending] = useState<Boolean>(false)
+  const [pending, setPending] = useState<boolean>(false)
   const removeTag = async (tagID: string) => {
     if (pending)
       return
     try {
       setPending(true)
       await deleteTag(tagID)
-      notify({ type: 'success', message: t('common.actionMsg.modifiedSuccessfully') })
+      toast.success(t('actionMsg.modifiedSuccessfully', { ns: 'common' }))
       const newList = tagList.filter(tag => tag.id !== tagID)
       setTagList([
         ...newList,
       ])
       setPending(false)
     }
-    catch (e: any) {
-      notify({ type: 'error', message: t('common.actionMsg.modifiedUnsuccessfully') })
+    catch {
+      toast.error(t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }))
       setPending(false)
     }
   }
   const { run: handleRemove } = useDebounceFn(() => {
     removeTag(tag.id)
   }, { wait: 200 })
-
   return (
     <>
-      <div className={cn('shrink-0 flex items-center gap-0.5 pr-1 pl-2 py-1 rounded-lg border border-gray-200 text-sm leading-5 text-gray-700')}>
+      <div className={cn('flex shrink-0 items-center gap-0.5 rounded-lg border border-components-panel-border py-1 pr-1 pl-2 text-sm leading-5 text-text-secondary')}>
         {!isEditing && (
           <>
-            <div className='text-sm leading-5 text-gray-700'>
+            <div className="text-sm leading-5 text-text-secondary">
               {tag.name}
             </div>
-            <div className='shrink-0 px-1 text-sm leading-4.5 text-gray-500 font-medium'>{tag.binding_count}</div>
-            <div className='group/edit shrink-0 p-1 rounded-md cursor-pointer hover:bg-black/5' onClick={() => setIsEditing(true)}>
-              <RiEditLine className='w-3 h-3 text-gray-500 group-hover/edit:text-gray-800' />
+            <Tooltip popupContent={<div>{t('common.tagBound', { ns: 'workflow' })}</div>} needsDelay>
+              <div className="shrink-0 px-1 text-sm leading-4.5 font-medium text-text-tertiary">{tag.binding_count}</div>
+            </Tooltip>
+            <div className="group/edit shrink-0 cursor-pointer rounded-md p-1 hover:bg-state-base-hover" onClick={() => setIsEditing(true)}>
+              <span className="i-ri-edit-line h-3 w-3 text-text-tertiary group-hover/edit:text-text-secondary" data-testid="tag-item-editor-edit-button" />
             </div>
-            <div className='group/remove shrink-0 p-1 rounded-md cursor-pointer hover:bg-black/5' onClick={() => {
-              if (tag.binding_count)
-                setShowRemoveModal(true)
-              else
-                handleRemove()
-            }}>
-              <RiDeleteBinLine className='w-3 h-3 text-gray-500 group-hover/remove:text-gray-800' />
+            <div
+              className="group/remove shrink-0 cursor-pointer rounded-md p-1 hover:bg-state-base-hover"
+              onClick={() => {
+                if (tag.binding_count)
+                  setShowRemoveModal(true)
+                else
+                  handleRemove()
+              }}
+            >
+              <span className="i-ri-delete-bin-line h-3 w-3 text-text-tertiary group-hover/remove:text-text-secondary" data-testid="tag-item-editor-remove-button" />
             </div>
           </>
         )}
-        {isEditing && (
-          <input
-            className='shrink-0 outline-none appearance-none placeholder:text-gray-300 caret-primary-600'
-            autoFocus
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && editTag(tag.id, name)}
-            onBlur={() => editTag(tag.id, name)}
-          />
-        )}
+        {isEditing && (<input className="shrink-0 appearance-none caret-primary-600 outline-none placeholder:text-text-quaternary" autoFocus value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && editTag(tag.id, name)} onBlur={() => editTag(tag.id, name)} />)}
       </div>
-      <Confirm
-        title={`${t('common.tag.delete')} "${tag.name}"`}
-        isShow={showRemoveModal}
-        content={t('common.tag.deleteTip')}
-        onConfirm={() => {
-          handleRemove()
-          setShowRemoveModal(false)
-        }}
-        onCancel={() => setShowRemoveModal(false)}
-      />
+      <AlertDialog open={showRemoveModal} onOpenChange={open => !open && setShowRemoveModal(false)}>
+        <AlertDialogContent>
+          <div className="flex flex-col gap-2 px-6 pt-6 pb-4">
+            <AlertDialogTitle
+              title={`${t('tag.delete', { ns: 'common' })} "${tag.name}"`}
+              className="w-full truncate title-2xl-semi-bold text-text-primary"
+            >
+              {`${t('tag.delete', { ns: 'common' })} "${tag.name}"`}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="w-full system-md-regular wrap-break-word whitespace-pre-wrap text-text-tertiary">
+              {t('tag.deleteTip', { ns: 'common' })}
+            </AlertDialogDescription>
+          </div>
+          <AlertDialogActions>
+            <AlertDialogCancelButton>
+              {t('operation.cancel', { ns: 'common' })}
+            </AlertDialogCancelButton>
+            <AlertDialogConfirmButton
+              onClick={() => {
+                handleRemove()
+                setShowRemoveModal(false)
+              }}
+            >
+              {t('operation.confirm', { ns: 'common' })}
+            </AlertDialogConfirmButton>
+          </AlertDialogActions>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
-
 export default TagItemEditor

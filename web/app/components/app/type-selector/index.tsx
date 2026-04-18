@@ -1,128 +1,225 @@
-import { useTranslation } from 'react-i18next'
-import React, { useState } from 'react'
-import { RiArrowDownSLine } from '@remixicon/react'
-import cn from '@/utils/classnames'
+import { cn } from '@langgenius/dify-ui/cn'
 import {
-  PortalToFollowElem,
-  PortalToFollowElemContent,
-  PortalToFollowElemTrigger,
-} from '@/app/components/base/portal-to-follow-elem'
-import { Check, DotsGrid } from '@/app/components/base/icons/src/vender/line/general'
-import { XCircle } from '@/app/components/base/icons/src/vender/solid/general'
-import { ChatBot, CuteRobot } from '@/app/components/base/icons/src/vender/solid/communication'
-import { Route } from '@/app/components/base/icons/src/vender/solid/mapsAndTravel'
-export type AppSelectorProps = {
-  value: string
-  onChange: (value: string) => void
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@langgenius/dify-ui/popover'
+import { RiArrowDownSLine, RiCloseCircleFill, RiExchange2Fill, RiFilter3Line } from '@remixicon/react'
+import * as React from 'react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { BubbleTextMod, ChatBot, ListSparkle, Logic } from '@/app/components/base/icons/src/vender/solid/communication'
+import { AppModeEnum } from '@/types/app'
+
+type AppSelectorProps = {
+  value: Array<AppModeEnum>
+  onChange: (value: AppSelectorProps['value']) => void
 }
 
+const allTypes: AppModeEnum[] = [AppModeEnum.WORKFLOW, AppModeEnum.ADVANCED_CHAT, AppModeEnum.CHAT, AppModeEnum.AGENT_CHAT, AppModeEnum.COMPLETION]
+
 const AppTypeSelector = ({ value, onChange }: AppSelectorProps) => {
-  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
+  const { t } = useTranslation()
+  const triggerLabel = value.length === 0
+    ? t('typeSelector.all', { ns: 'app' })
+    : value.map(type => getAppTypeLabel(type, t)).join(', ')
 
   return (
-    <PortalToFollowElem
+    <Popover
       open={open}
       onOpenChange={setOpen}
-      placement='bottom-start'
-      offset={4}
     >
-      <div className='relative'>
-        <PortalToFollowElemTrigger
-          onClick={() => setOpen(v => !v)}
-          className='block'
+      <div className="relative">
+        <PopoverTrigger
+          aria-label={triggerLabel}
+          className={cn(
+            'flex cursor-pointer items-center justify-between rounded-md px-2 hover:bg-state-base-hover',
+            value.length > 0 && 'pr-7',
+          )}
         >
-          <div className={cn(
-            'flex items-center gap-1 h-8 text-gray-700 text-[13px] leading-[18px] cursor-pointer px-2 rounded-lg bg-white shadow-xs hover:bg-gray-200',
-            open && !value && '!bg-gray-200 hover:!bg-gray-200',
-            !!value && '!bg-white hover:!bg-white',
-          )}>
-            {!value && (
-              <>
-                <div className='w-4 h-4 p-[1px]'>
-                  <DotsGrid className='w-3.5 h-3.5' />
-                </div>
-                <div className=''>{t('app.typeSelector.all')}</div>
-                <div className='w-4 h-4 p-[1px]'>
-                  <RiArrowDownSLine className='w-3.5 h-3.5' />
-                </div>
-              </>
-            )}
-            {value === 'chatbot' && (
-              <>
-                <div className='w-4 h-4 p-[1px]'>
-                  <ChatBot className='w-3.5 h-3.5 text-[#1570EF]' />
-                </div>
-                <div className=''>{t('app.typeSelector.chatbot')}</div>
-                <div className='w-4 h-4 p-[1px]' onClick={(e) => {
-                  e.stopPropagation()
-                  onChange('')
-                }}>
-                  <XCircle className='w-3.5 h-3.5 text-gray-400 cursor-pointer  hover:text-gray-600' />
-                </div>
-              </>
-            )}
-            {value === 'agent' && (
-              <>
-                <div className='w-4 h-4 p-[1px]'>
-                  <CuteRobot className='w-3.5 h-3.5 text-indigo-600' />
-                </div>
-                <div className=''>{t('app.typeSelector.agent')}</div>
-                <div className='w-4 h-4 p-[1px]' onClick={(e) => {
-                  e.stopPropagation()
-                  onChange('')
-                }}>
-                  <XCircle className='w-3.5 h-3.5 text-gray-400 cursor-pointer  hover:text-gray-600' />
-                </div>
-              </>
-            )}
-            {value === 'workflow' && (
-              <>
-                <div className='w-4 h-4 p-[1px]'>
-                  <Route className='w-3.5 h-3.5 text-[#F79009]' />
-                </div>
-                <div className=''>{t('app.typeSelector.workflow')}</div>
-                <div className='w-4 h-4 p-[1px]' onClick={(e) => {
-                  e.stopPropagation()
-                  onChange('')
-                }}>
-                  <XCircle className='w-3.5 h-3.5 text-gray-400 cursor-pointer  hover:text-gray-600' />
-                </div>
-              </>
-            )}
-          </div>
-        </PortalToFollowElemTrigger>
-        <PortalToFollowElemContent className='z-[1002]'>
-          <div className='relative p-1 w-[180px] bg-white rounded-lg shadow-xl'>
-            <div className='flex items-center pl-3 py-[6px] pr-2 rounded-lg cursor-pointer hover:bg-gray-50' onClick={() => {
-              onChange('chatbot')
-              setOpen(false)
-            }}>
-              <ChatBot className='mr-2 w-4 h-4 text-[#1570EF]' />
-              <div className='grow text-gray-700 text-[13px] font-medium leading-[18px]'>{t('app.typeSelector.chatbot')}</div>
-              {value === 'chatbot' && <Check className='w-4 h-4 text-primary-600' />}
-            </div>
-            <div className='flex items-center pl-3 py-[6px] pr-2 rounded-lg cursor-pointer hover:bg-gray-50' onClick={() => {
-              onChange('agent')
-              setOpen(false)
-            }}>
-              <CuteRobot className='mr-2 w-4 h-4 text-indigo-600' />
-              <div className='grow text-gray-700 text-[13px] font-medium leading-[18px]'>{t('app.typeSelector.agent')}</div>
-              {value === 'agent' && <Check className='w-4 h-4 text-primary-600' />}
-            </div>
-            <div className='flex items-center pl-3 py-[6px] pr-2 rounded-lg cursor-pointer hover:bg-gray-50' onClick={() => {
-              onChange('workflow')
-              setOpen(false)
-            }}>
-              <Route className='mr-2 w-4 h-4 text-[#F79009]' />
-              <div className='grow text-gray-700 text-[13px] font-medium leading-[18px]'>{t('app.typeSelector.workflow')}</div>
-              {value === 'workflow' && <Check className='w-4 h-4 text-primary-600' />}
-            </div>
-          </div>
-        </PortalToFollowElemContent>
+          <AppTypeSelectTrigger values={value} />
+        </PopoverTrigger>
+        {value.length > 0 && (
+          <button
+            type="button"
+            aria-label={t('operation.clear', { ns: 'common' })}
+            className="group absolute top-1/2 right-2 h-4 w-4 -translate-y-1/2"
+            onClick={() => onChange([])}
+          >
+            <RiCloseCircleFill
+              className="h-3.5 w-3.5 text-text-quaternary group-hover:text-text-tertiary"
+            />
+          </button>
+        )}
+        <PopoverContent
+          placement="bottom-start"
+          sideOffset={4}
+          popupClassName="w-[240px] rounded-xl border border-components-panel-border bg-components-panel-bg-blur shadow-lg backdrop-blur-[5px]"
+        >
+          <ul className="relative w-full p-1">
+            {allTypes.map(mode => (
+              <AppTypeSelectorItem
+                key={mode}
+                type={mode}
+                checked={Boolean(value.length > 0 && value?.indexOf(mode) !== -1)}
+                onClick={() => {
+                  if (value?.indexOf(mode) !== -1)
+                    onChange(value?.filter(v => v !== mode) ?? [])
+                  else
+                    onChange([...(value || []), mode])
+                }}
+              />
+            ))}
+          </ul>
+        </PopoverContent>
       </div>
-    </PortalToFollowElem>
+    </Popover>
   )
 }
 
-export default React.memo(AppTypeSelector)
+export default AppTypeSelector
+
+type AppTypeIconProps = {
+  type: AppModeEnum
+  style?: React.CSSProperties
+  className?: string
+  wrapperClassName?: string
+}
+
+export const AppTypeIcon = React.memo(({ type, className, wrapperClassName, style }: AppTypeIconProps) => {
+  const wrapperClassNames = cn('inline-flex h-5 w-5 items-center justify-center rounded-md border border-divider-regular', wrapperClassName)
+  const iconClassNames = cn('h-3.5 w-3.5 text-components-avatar-shape-fill-stop-100', className)
+  if (type === AppModeEnum.CHAT) {
+    return (
+      <div style={style} className={cn(wrapperClassNames, 'bg-components-icon-bg-blue-solid')}>
+        <ChatBot className={iconClassNames} />
+      </div>
+    )
+  }
+  if (type === AppModeEnum.AGENT_CHAT) {
+    return (
+      <div style={style} className={cn(wrapperClassNames, 'bg-components-icon-bg-violet-solid')}>
+        <Logic className={iconClassNames} />
+      </div>
+    )
+  }
+  if (type === AppModeEnum.ADVANCED_CHAT) {
+    return (
+      <div style={style} className={cn(wrapperClassNames, 'bg-components-icon-bg-blue-light-solid')}>
+        <BubbleTextMod className={iconClassNames} />
+      </div>
+    )
+  }
+  if (type === AppModeEnum.WORKFLOW) {
+    return (
+      <div style={style} className={cn(wrapperClassNames, 'bg-components-icon-bg-indigo-solid')}>
+        <RiExchange2Fill className={iconClassNames} />
+      </div>
+    )
+  }
+  if (type === AppModeEnum.COMPLETION) {
+    return (
+      <div style={style} className={cn(wrapperClassNames, 'bg-components-icon-bg-teal-solid')}>
+        <ListSparkle className={iconClassNames} />
+      </div>
+    )
+  }
+  return null
+})
+
+function AppTypeSelectTrigger({ values }: { readonly values: AppSelectorProps['value'] }) {
+  const { t } = useTranslation()
+  if (!values || values.length === 0) {
+    return (
+      <div className={cn(
+        'flex h-8 items-center justify-between gap-1',
+      )}
+      >
+        <RiFilter3Line className="h-4 w-4 text-text-tertiary" />
+        <div className="min-w-[65px] grow text-center system-sm-medium text-text-tertiary">{t('typeSelector.all', { ns: 'app' })}</div>
+        <RiArrowDownSLine className="h-4 w-4 text-text-tertiary" />
+      </div>
+    )
+  }
+  if (values.length === 1) {
+    return (
+      <div className={cn(
+        'flex h-8 flex-nowrap items-center justify-between gap-1',
+      )}
+      >
+        <AppTypeIcon type={values[0]!} />
+        <div className="line-clamp-1 flex flex-1 items-center text-center">
+          <AppTypeLabel type={values[0]!} className="system-sm-medium text-components-menu-item-text" />
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className={cn(
+      'relative flex h-8 items-center justify-between -space-x-2',
+    )}
+    >
+      {values.map((mode, index) => (<AppTypeIcon key={mode} type={mode} wrapperClassName="border border-components-panel-on-panel-item-bg" style={{ zIndex: 5 - index }} />))}
+    </div>
+  )
+}
+
+type AppTypeSelectorItemProps = {
+  checked: boolean
+  type: AppModeEnum
+  onClick: () => void
+}
+function AppTypeSelectorItem({ checked, type, onClick }: AppTypeSelectorItemProps) {
+  return (
+    <li>
+      <button
+        type="button"
+        className="flex w-full items-center space-x-2 rounded-lg py-1 pr-1 pl-2 text-left hover:bg-state-base-hover"
+        aria-pressed={checked}
+        onClick={onClick}
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            'flex h-4 w-4 shrink-0 items-center justify-center rounded-sm shadow-xs shadow-shadow-shadow-3',
+            checked
+              ? 'bg-components-checkbox-bg text-components-checkbox-icon'
+              : 'border border-components-checkbox-border bg-components-checkbox-bg-unchecked',
+          )}
+        >
+          {checked && <span className="i-ri-check-line h-3 w-3" />}
+        </span>
+        <AppTypeIcon type={type} />
+        <div className="grow p-1 pl-0">
+          <AppTypeLabel type={type} className="system-sm-medium text-components-menu-item-text" />
+        </div>
+      </button>
+    </li>
+  )
+}
+
+function getAppTypeLabel(type: AppModeEnum, t: ReturnType<typeof useTranslation>['t']) {
+  if (type === AppModeEnum.CHAT)
+    return t('typeSelector.chatbot', { ns: 'app' })
+  if (type === AppModeEnum.AGENT_CHAT)
+    return t('typeSelector.agent', { ns: 'app' })
+  if (type === AppModeEnum.COMPLETION)
+    return t('typeSelector.completion', { ns: 'app' })
+  if (type === AppModeEnum.ADVANCED_CHAT)
+    return t('typeSelector.advanced', { ns: 'app' })
+  if (type === AppModeEnum.WORKFLOW)
+    return t('typeSelector.workflow', { ns: 'app' })
+
+  return ''
+}
+
+type AppTypeLabelProps = {
+  type: AppModeEnum
+  className?: string
+}
+export function AppTypeLabel({ type, className }: AppTypeLabelProps) {
+  const { t } = useTranslation()
+
+  return <span className={className}>{getAppTypeLabel(type, t)}</span>
+}

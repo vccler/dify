@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
 import type { FC } from 'react'
+import * as React from 'react'
+import { useState } from 'react'
 import {
   PortalToFollowElem,
   PortalToFollowElemContent,
@@ -23,20 +24,22 @@ const Tooltip: FC<TooltipProps> = ({
     <PortalToFollowElem
       open={open}
       onOpenChange={setOpen}
-      placement='top-start'
+      placement="top-start"
     >
       <PortalToFollowElemTrigger
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >
-        <div className='flex items-center mr-6'>
+        <div data-testid="tooltip-trigger-content" className="mr-6 flex items-center">
           {icon}
           {data}
         </div>
       </PortalToFollowElemTrigger>
       <PortalToFollowElemContent style={{ zIndex: 1001 }}>
-        <div className='p-3 bg-white text-xs font-medium text-gray-500 rounded-lg shadow-lg'>
-          {text} {data}
+        <div data-testid="tooltip-popup" className="rounded-lg bg-components-tooltip-bg p-3 system-xs-medium text-text-quaternary shadow-lg">
+          {text}
+          {' '}
+          {data}
         </div>
       </PortalToFollowElemContent>
     </PortalToFollowElem>

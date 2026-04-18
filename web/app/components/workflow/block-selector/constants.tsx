@@ -2,13 +2,65 @@ import type { Block } from '../types'
 import { BlockEnum } from '../types'
 import { BlockClassificationEnum } from './types'
 
-export const BLOCKS: Block[] = [
+export const BLOCK_CLASSIFICATIONS = [
+  BlockClassificationEnum.Default,
+  BlockClassificationEnum.QuestionUnderstand,
+  BlockClassificationEnum.Logic,
+  BlockClassificationEnum.Transform,
+  BlockClassificationEnum.Utilities,
+] as const
+
+export const DEFAULT_FILE_EXTENSIONS_IN_LOCAL_FILE_DATA_SOURCE = [
+  'txt',
+  'markdown',
+  'mdx',
+  'pdf',
+  'html',
+  'xlsx',
+  'xls',
+  'vtt',
+  'properties',
+  'doc',
+  'docx',
+  'csv',
+  'eml',
+  'msg',
+  'pptx',
+  'xml',
+  'epub',
+  'ppt',
+  'md',
+]
+
+export const START_BLOCKS = [
   {
     classification: BlockClassificationEnum.Default,
     type: BlockEnum.Start,
-    title: 'Start',
-    description: '',
+    title: 'User Input',
+    description: 'Traditional start node for user input',
   },
+  {
+    classification: BlockClassificationEnum.Default,
+    type: BlockEnum.TriggerSchedule,
+    title: 'Schedule Trigger',
+    description: 'Time-based workflow trigger',
+  },
+  {
+    classification: BlockClassificationEnum.Default,
+    type: BlockEnum.TriggerWebhook,
+    title: 'Webhook Trigger',
+    description: 'HTTP callback trigger',
+  },
+] as const satisfies readonly Block[]
+
+export const ENTRY_NODE_TYPES = [
+  BlockEnum.Start,
+  BlockEnum.TriggerSchedule,
+  BlockEnum.TriggerWebhook,
+  BlockEnum.TriggerPlugin,
+] as const
+
+export const BLOCKS = [
   {
     classification: BlockClassificationEnum.Default,
     type: BlockEnum.LLM,
@@ -41,8 +93,19 @@ export const BLOCKS: Block[] = [
   },
   {
     classification: BlockClassificationEnum.Logic,
+    type: BlockEnum.LoopEnd,
+    title: 'Exit Loop',
+    description: '',
+  },
+  {
+    classification: BlockClassificationEnum.Logic,
     type: BlockEnum.Iteration,
     title: 'Iteration',
+  },
+  {
+    classification: BlockClassificationEnum.Logic,
+    type: BlockEnum.Loop,
+    title: 'Loop',
   },
   {
     classification: BlockClassificationEnum.Transform,
@@ -84,12 +147,9 @@ export const BLOCKS: Block[] = [
     type: BlockEnum.ListFilter,
     title: 'List Filter',
   },
-]
-
-export const BLOCK_CLASSIFICATIONS: string[] = [
-  BlockClassificationEnum.Default,
-  BlockClassificationEnum.QuestionUnderstand,
-  BlockClassificationEnum.Logic,
-  BlockClassificationEnum.Transform,
-  BlockClassificationEnum.Utilities,
-]
+  {
+    classification: BlockClassificationEnum.Default,
+    type: BlockEnum.Agent,
+    title: 'Agent',
+  },
+] as const satisfies readonly Block[]

@@ -1,43 +1,57 @@
 'use client'
 import type { FC } from 'react'
-import React from 'react'
-import s from './style.module.css'
-import cn from '@/utils/classnames'
+import { cn } from '@langgenius/dify-ui/cn'
+import * as React from 'react'
 
 type Item = {
   id: string
   name: string
   isRight?: boolean
+  icon?: React.ReactNode
   extra?: React.ReactNode
+  disabled?: boolean
 }
 
 export type ITabHeaderProps = {
   items: Item[]
   value: string
+  itemClassName?: string
+  itemWrapClassName?: string
+  activeItemClassName?: string
   onChange: (value: string) => void
 }
 
 const TabHeader: FC<ITabHeaderProps> = ({
   items,
   value,
+  itemClassName,
+  itemWrapClassName,
+  activeItemClassName,
   onChange,
 }) => {
-  const renderItem = ({ id, name, extra }: Item) => (
+  const renderItem = ({ id, name, icon, extra, disabled }: Item) => (
     <div
       key={id}
-      className={cn(id === value ? `${s.itemActive} text-gray-900` : 'text-gray-500', 'relative flex items-center pb-1.5 leading-6 cursor-pointer')}
-      onClick={() => onChange(id)}
+      data-testid={`tab-header-item-${id}`}
+      className={cn(
+        'relative flex cursor-pointer items-center border-b-2 border-transparent pt-2.5 pb-2 system-md-semibold',
+        id === value ? cn('border-components-tab-active text-text-primary', activeItemClassName) : 'text-text-tertiary',
+        disabled && 'cursor-not-allowed opacity-30',
+        itemWrapClassName,
+      )}
+      onClick={() => !disabled && onChange(id)}
     >
-      <div className='text-base font-semibold'>{name}</div>
+      {icon || ''}
+      <div className={cn('ml-2', itemClassName)}>{name}</div>
       {extra || ''}
     </div>
   )
   return (
-    <div className='flex justify-between border-b border-gray-200 '>
-      <div className='flex space-x-4'>
+    <div data-testid="tab-header" className="flex justify-between">
+      <div data-testid="tab-header-left" className="flex space-x-4">
         {items.filter(item => !item.isRight).map(renderItem)}
       </div>
-      <div className='flex space-x-4'>
+      <div data-testid="tab-header-right" className="flex space-x-4">
         {items.filter(item => item.isRight).map(renderItem)}
       </div>
     </div>

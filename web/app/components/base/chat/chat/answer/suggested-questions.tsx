@@ -1,6 +1,7 @@
 import type { FC } from 'react'
-import { memo } from 'react'
 import type { ChatItem } from '../../types'
+import { cn } from '@langgenius/dify-ui/cn'
+import { memo } from 'react'
 import { useChatContext } from '../context'
 
 type SuggestedQuestionsProps = {
@@ -9,7 +10,8 @@ type SuggestedQuestionsProps = {
 const SuggestedQuestions: FC<SuggestedQuestionsProps> = ({
   item,
 }) => {
-  const { onSend } = useChatContext()
+  const { onSend, readonly } = useChatContext()
+
   const {
     isOpeningStatement,
     suggestedQuestions,
@@ -19,15 +21,20 @@ const SuggestedQuestions: FC<SuggestedQuestionsProps> = ({
     return null
 
   return (
-    <div className='flex flex-wrap'>
+    <div className="flex flex-wrap">
       {suggestedQuestions.filter(q => !!q && q.trim()).map((question, index) => (
         <div
           key={index}
-          className='mt-1 mr-1 max-w-full last:mr-0 shrink-0 py-[5px] leading-[18px] items-center px-4 rounded-lg border border-gray-200 shadow-xs bg-white text-xs font-medium text-primary-600 cursor-pointer'
-          onClick={() => onSend?.(question)}
+          className={cn(
+            'mt-1 mr-1 inline-flex max-w-full shrink-0 cursor-pointer flex-wrap rounded-lg border-[0.5px] border-components-button-secondary-border bg-components-button-secondary-bg px-3.5 py-2 system-sm-medium text-components-button-secondary-accent-text shadow-xs last:mr-0 hover:border-components-button-secondary-border-hover hover:bg-components-button-secondary-bg-hover',
+            readonly && 'pointer-events-none opacity-50',
+          )}
+          onClick={() => !readonly && onSend?.(question)}
+          data-testid="suggested-question"
         >
           {question}
-        </div>),
+        </div>
+      ),
       )}
     </div>
   )

@@ -1,19 +1,19 @@
 'use client'
-import React, { useEffect, useRef, useState } from 'react'
+import { QRCodeCanvas as QRCode } from 'qrcode.react'
+import * as React from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import QRCode from 'qrcode.react'
-import QrcodeStyle from './style.module.css'
+import ActionButton from '@/app/components/base/action-button'
 import Tooltip from '@/app/components/base/tooltip'
+import { downloadUrl } from '@/utils/download'
 
 type Props = {
   content: string
-  selectorId: string
-  className?: string
 }
 
-const prefixEmbedded = 'appOverview.overview.appInfo.qrcode.title'
+const prefixEmbedded = 'overview.appInfo.qrcode.title'
 
-const ShareQRCode = ({ content, selectorId, className }: Props) => {
+const ShareQRCode = ({ content }: Props) => {
   const { t } = useTranslation()
   const [isShow, setIsShow] = useState<boolean>(false)
   const qrCodeRef = useRef<HTMLDivElement>(null)
@@ -25,6 +25,7 @@ const ShareQRCode = ({ content, selectorId, className }: Props) => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      /* v8 ignore next 2 -- this handler can fire during open/close transitions where the panel ref is temporarily null; guard is defensive. @preserve */
       if (qrCodeRef.current && !qrCodeRef.current.contains(event.target as Node))
         setIsShow(false)
     }
@@ -38,37 +39,39 @@ const ShareQRCode = ({ content, selectorId, className }: Props) => {
   }, [isShow])
 
   const downloadQR = () => {
-    const canvas = document.getElementsByTagName('canvas')[0]
-    const link = document.createElement('a')
-    link.download = 'qrcode.png'
-    link.href = canvas.toDataURL()
-    link.click()
+    const canvas = qrCodeRef.current?.querySelector('canvas')
+    if (!(canvas instanceof HTMLCanvasElement))
+      return
+    downloadUrl({ url: canvas.toDataURL(), fileName: 'qrcode.png' })
   }
 
   const handlePanelClick = (event: React.MouseEvent) => {
     event.stopPropagation()
   }
 
+  const tooltipText = t(`${prefixEmbedded}`, { ns: 'appOverview' })
+  /* v8 ignore next -- react-i18next returns a non-empty key/string in configured runtime; empty fallback protects against missing i18n payloads. @preserve */
+  const safeTooltipText = tooltipText || ''
+
   return (
     <Tooltip
-      popupContent={t(`${prefixEmbedded}`) || ''}
+      popupContent={safeTooltipText}
     >
-      <div
-        className={`w-8 h-8 cursor-pointer rounded-lg ${className ?? ''}`}
-        onClick={toggleQRCode}
-      >
-        <div className={`w-full h-full ${QrcodeStyle.QrcodeIcon} ${isShow ? QrcodeStyle.show : ''}`} />
+      <div className="relative h-6 w-6" onClick={toggleQRCode} data-testid="qrcode-container">
+        <ActionButton>
+          <span className="i-ri-qr-code-line h-4 w-4" />
+        </ActionButton>
         {isShow && (
           <div
             ref={qrCodeRef}
-            className={QrcodeStyle.qrcodeform}
+            className="absolute top-8 -right-8 z-10 flex w-[232px] flex-col items-center rounded-lg bg-components-panel-bg p-4 shadow-xs"
             onClick={handlePanelClick}
           >
-            <QRCode size={160} value={content} className={QrcodeStyle.qrcodeimage}/>
-            <div className={QrcodeStyle.text}>
-              <div className={`text-gray-500 ${QrcodeStyle.scan}`}>{t('appOverview.overview.appInfo.qrcode.scan')}</div>
-              <div className={`text-gray-500 ${QrcodeStyle.scan}`}>·</div>
-              <div className={QrcodeStyle.download} onClick={downloadQR}>{t('appOverview.overview.appInfo.qrcode.download')}</div>
+            <QRCode size={160} value={content} className="mb-2" />
+            <div className="flex items-center system-xs-regular">
+              <div className="text-text-tertiary">{t('overview.appInfo.qrcode.scan', { ns: 'appOverview' })}</div>
+              <div className="text-text-tertiary">·</div>
+              <div className="cursor-pointer text-text-accent-secondary" onClick={downloadQR}>{t('overview.appInfo.qrcode.download', { ns: 'appOverview' })}</div>
             </div>
           </div>
         )}

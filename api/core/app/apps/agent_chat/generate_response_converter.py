@@ -1,9 +1,9 @@
-import json
 from collections.abc import Generator
-from typing import cast
+from typing import Any, cast
 
 from core.app.apps.base_app_generate_response_converter import AppGenerateResponseConverter
 from core.app.entities.task_entities import (
+    AppStreamResponse,
     ChatbotAppBlockingResponse,
     ChatbotAppStreamResponse,
     ErrorStreamResponse,
@@ -16,7 +16,7 @@ class AgentChatAppGenerateResponseConverter(AppGenerateResponseConverter):
     _blocking_response_type = ChatbotAppBlockingResponse
 
     @classmethod
-    def convert_blocking_full_response(cls, blocking_response: ChatbotAppBlockingResponse) -> dict:
+    def convert_blocking_full_response(cls, blocking_response: ChatbotAppBlockingResponse):  # type: ignore[override]
         """
         Convert blocking full response.
         :param blocking_response: blocking response
@@ -37,7 +37,7 @@ class AgentChatAppGenerateResponseConverter(AppGenerateResponseConverter):
         return response
 
     @classmethod
-    def convert_blocking_simple_response(cls, blocking_response: ChatbotAppBlockingResponse) -> dict:
+    def convert_blocking_simple_response(cls, blocking_response: ChatbotAppBlockingResponse):  # type: ignore[override]
         """
         Convert blocking simple response.
         :param blocking_response: blocking response
@@ -46,14 +46,17 @@ class AgentChatAppGenerateResponseConverter(AppGenerateResponseConverter):
         response = cls.convert_blocking_full_response(blocking_response)
 
         metadata = response.get("metadata", {})
-        response["metadata"] = cls._get_simple_metadata(metadata)
+        if isinstance(metadata, dict):
+            response["metadata"] = cls._get_simple_metadata(metadata)
+        else:
+            response["metadata"] = {}
 
         return response
 
     @classmethod
     def convert_stream_full_response(
-        cls, stream_response: Generator[ChatbotAppStreamResponse, None, None]
-    ) -> Generator[str, None, None]:
+        cls, stream_response: Generator[AppStreamResponse, None, None]
+    ) -> Generator[dict[str, Any] | str, None, None]:
         """
         Convert stream full response.
         :param stream_response: stream response
@@ -78,13 +81,13 @@ class AgentChatAppGenerateResponseConverter(AppGenerateResponseConverter):
                 data = cls._error_to_stream_response(sub_stream_response.err)
                 response_chunk.update(data)
             else:
-                response_chunk.update(sub_stream_response.to_dict())
-            yield json.dumps(response_chunk)
+                response_chunk.update(sub_stream_response.model_dump(mode="json"))
+            yield response_chunk
 
     @classmethod
     def convert_stream_simple_response(
-        cls, stream_response: Generator[ChatbotAppStreamResponse, None, None]
-    ) -> Generator[str, None, None]:
+        cls, stream_response: Generator[AppStreamResponse, None, None]
+    ) -> Generator[dict[str, Any] | str, None, None]:
         """
         Convert stream simple response.
         :param stream_response: stream response
@@ -106,14 +109,14 @@ class AgentChatAppGenerateResponseConverter(AppGenerateResponseConverter):
             }
 
             if isinstance(sub_stream_response, MessageEndStreamResponse):
-                sub_stream_response_dict = sub_stream_response.to_dict()
+                sub_stream_response_dict = sub_stream_response.model_dump(mode="json")
                 metadata = sub_stream_response_dict.get("metadata", {})
                 sub_stream_response_dict["metadata"] = cls._get_simple_metadata(metadata)
                 response_chunk.update(sub_stream_response_dict)
-            if isinstance(sub_stream_response, ErrorStreamResponse):
+            elif isinstance(sub_stream_response, ErrorStreamResponse):
                 data = cls._error_to_stream_response(sub_stream_response.err)
                 response_chunk.update(data)
             else:
-                response_chunk.update(sub_stream_response.to_dict())
+                response_chunk.update(sub_stream_response.model_dump(mode="json"))
 
-            yield json.dumps(response_chunk)
+            yield response_chunk

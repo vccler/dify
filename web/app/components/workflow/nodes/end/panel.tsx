@@ -1,14 +1,13 @@
-import { type FC } from 'react'
-import React from 'react'
-import { useTranslation } from 'react-i18next'
-import useConfig from './use-config'
+import type { FC } from 'react'
 import type { EndNodeType } from './types'
-import VarList from '@/app/components/workflow/nodes/_base/components/variable/var-list'
+import type { NodePanelProps } from '@/app/components/workflow/types'
+import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import Field from '@/app/components/workflow/nodes/_base/components/field'
-import AddButton from '@/app/components/base/button/add-button'
-import { type NodePanelProps } from '@/app/components/workflow/types'
+import VarList from '@/app/components/workflow/nodes/_base/components/variable/var-list'
+import useConfig from './use-config'
 
-const i18nPrefix = 'workflow.nodes.end'
+const i18nPrefix = 'nodes.end'
 
 const Panel: FC<NodePanelProps<EndNodeType>> = ({
   id,
@@ -25,13 +24,20 @@ const Panel: FC<NodePanelProps<EndNodeType>> = ({
 
   const outputs = inputs.outputs
   return (
-    <div className='mt-2'>
-      <div className='px-4 pb-4 space-y-4'>
+    <div className="mt-2">
+      <div className="space-y-4 px-4 pb-4">
 
         <Field
-          title={t(`${i18nPrefix}.output.variable`)}
+          title={t(`${i18nPrefix}.output.variable`, { ns: 'workflow' })}
+          required
           operations={
-            !readOnly ? <AddButton onClick={handleAddVariable} /> : undefined
+            !readOnly
+              ? (
+                  <div className="cursor-pointer rounded-md p-1 select-none hover:bg-state-base-hover" onClick={handleAddVariable} data-testid="add-button">
+                    <span className="i-ri-add-line h-4 w-4 text-text-tertiary" />
+                  </div>
+                )
+              : undefined
           }
         >
           <VarList

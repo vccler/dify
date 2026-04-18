@@ -1,14 +1,15 @@
 'use client'
-import { useTranslation } from 'react-i18next'
-import { Fragment, useState } from 'react'
-import { ChevronDownIcon, PlusIcon } from '@heroicons/react/24/solid'
-import { Menu, Transition } from '@headlessui/react'
-import { useRouter } from 'next/navigation'
-import Indicator from '../indicator'
 import type { AppDetailResponse } from '@/models/app'
+import { Menu, MenuButton, MenuItem, MenuItems, Transition } from '@headlessui/react'
+import { ChevronDownIcon, PlusIcon } from '@heroicons/react/24/solid'
+import { noop } from 'es-toolkit/function'
+import { Fragment, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import CreateAppDialog from '@/app/components/app/create-app-dialog'
 import AppIcon from '@/app/components/base/app-icon'
 import { useAppContext } from '@/context/app-context'
+import { useRouter } from '@/next/navigation'
+import Indicator from '../indicator'
 
 type IAppSelectorProps = {
   appItems: AppDetailResponse[]
@@ -30,19 +31,19 @@ export default function AppSelector({ appItems, curApp }: IAppSelectorProps) {
     <div className="">
       <Menu as="div" className="relative inline-block text-left">
         <div>
-          <Menu.Button
+          <MenuButton
             className="
-              inline-flex items-center w-full h-7 justify-center
-              rounded-[10px] pl-2 pr-2.5 text-[14px] font-semibold
+              inline-flex h-7 w-full items-center justify-center
+              rounded-[10px] pr-2.5 pl-2 text-[14px] font-semibold
               text-[#1C64F2] hover:bg-[#EBF5FF]
             "
           >
             {curApp?.name}
             <ChevronDownIcon
-              className="w-3 h-3 ml-1"
+              className="ml-1 h-3 w-3"
               aria-hidden="true"
             />
-          </Menu.Button>
+          </MenuButton>
         </div>
         <Transition
           as={Fragment}
@@ -53,58 +54,63 @@ export default function AppSelector({ appItems, curApp }: IAppSelectorProps) {
           leaveFrom="transform opacity-100 scale-100"
           leaveTo="transform opacity-0 scale-95"
         >
-          <Menu.Items
+          <MenuItems
             className="
-              absolute -left-11 right-0 mt-1.5 w-60 max-w-80
-              divide-y divide-gray-100 origin-top-right rounded-lg bg-white
+              absolute right-0 -left-11 mt-1.5 w-60 max-w-80
+              origin-top-right divide-y divide-gray-100 rounded-lg bg-white
               shadow-lg
             "
           >
-            {!!appItems.length && (<div className="px-1 py-1 overflow-auto" style={{ maxHeight: '50vh' }}>
-              {
-                appItems.map((app: AppDetailResponse) => (
-                  <Menu.Item key={app.id}>
-                    <div className={itemClassName} onClick={() =>
-                      router.push(`/app/${app.id}/${isCurrentWorkspaceEditor ? 'configuration' : 'overview'}`)
-                    }>
-                      <div className='relative w-6 h-6 mr-2 bg-[#D5F5F6] rounded-[6px]'>
-                        <AppIcon size='tiny' />
-                        <div className='flex justify-center items-center absolute -right-0.5 -bottom-0.5 w-2.5 h-2.5 bg-white rounded'>
-                          <Indicator />
+            {!!appItems.length && (
+              <div className="overflow-auto px-1 py-1" style={{ maxHeight: '50vh' }}>
+                {
+                  appItems.map((app: AppDetailResponse) => (
+                    <MenuItem key={app.id}>
+                      <div
+                        className={itemClassName}
+                        onClick={() =>
+                          router.push(`/app/${app.id}/${isCurrentWorkspaceEditor ? 'configuration' : 'overview'}`)}
+                      >
+                        <div className="relative mr-2 h-6 w-6 rounded-md bg-[#D5F5F6]">
+                          <AppIcon size="tiny" />
+                          <div className="absolute -right-0.5 -bottom-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-sm bg-white">
+                            <Indicator />
+                          </div>
                         </div>
+                        {app.name}
                       </div>
-                      {app.name}
-                    </div>
-                  </Menu.Item>
-                ))
-              }
-            </div>)}
-            {isCurrentWorkspaceEditor && <Menu.Item>
-              <div className='p-1' onClick={() => setShowNewAppDialog(true)}>
-                <div
-                  className='flex items-center h-12 rounded-lg cursor-pointer hover:bg-gray-100'
-                >
-                  <div
-                    className='
-                      flex justify-center items-center
-                      ml-4 mr-2 w-6 h-6 bg-gray-100 rounded-[6px]
-                      border-[0.5px] border-gray-200 border-dashed
-                    '
-                  >
-                    <PlusIcon className='w-4 h-4 text-gray-500' />
-                  </div>
-                  <div className='font-normal text-[14px] text-gray-700'>{t('common.menus.newApp')}</div>
-                </div>
+                    </MenuItem>
+                  ))
+                }
               </div>
-            </Menu.Item>
-            }
-          </Menu.Items>
+            )}
+            {isCurrentWorkspaceEditor && (
+              <MenuItem>
+                <div className="p-1" onClick={() => setShowNewAppDialog(true)}>
+                  <div
+                    className="flex h-12 cursor-pointer items-center rounded-lg hover:bg-gray-100"
+                  >
+                    <div
+                      className="
+                      mr-2 ml-4 flex
+                      h-6 w-6 items-center justify-center rounded-md border-[0.5px]
+                      border-dashed border-gray-200 bg-gray-100
+                    "
+                    >
+                      <PlusIcon className="h-4 w-4 text-gray-500" />
+                    </div>
+                    <div className="text-[14px] font-normal text-gray-700">{t('menus.newApp', { ns: 'common' })}</div>
+                  </div>
+                </div>
+              </MenuItem>
+            )}
+          </MenuItems>
         </Transition>
       </Menu>
       <CreateAppDialog
         show={showNewAppDialog}
         onClose={() => setShowNewAppDialog(false)}
-        onSuccess={() => {}}
+        onSuccess={noop}
       />
     </div>
   )

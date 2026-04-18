@@ -1,9 +1,13 @@
 import json
-from typing import Optional
 
 from core.agent.cot_agent_runner import CotAgentRunner
-from core.model_runtime.entities.message_entities import AssistantPromptMessage, PromptMessage, UserPromptMessage
-from core.model_runtime.utils.encoders import jsonable_encoder
+from graphon.model_runtime.entities.message_entities import (
+    AssistantPromptMessage,
+    PromptMessage,
+    TextPromptMessageContent,
+    UserPromptMessage,
+)
+from graphon.model_runtime.utils.encoders import jsonable_encoder
 
 
 class CotCompletionAgentRunner(CotAgentRunner):
@@ -11,7 +15,11 @@ class CotCompletionAgentRunner(CotAgentRunner):
         """
         Organize instruction prompt
         """
+        if self.app_config.agent is None:
+            raise ValueError("Agent configuration is not set")
         prompt_entity = self.app_config.agent.prompt
+        if prompt_entity is None:
+            raise ValueError("prompt entity is not set")
         first_prompt = prompt_entity.first_prompt
 
         system_prompt = (
@@ -22,7 +30,7 @@ class CotCompletionAgentRunner(CotAgentRunner):
 
         return system_prompt
 
-    def _organize_historic_prompt(self, current_session_messages: Optional[list[PromptMessage]] = None) -> str:
+    def _organize_historic_prompt(self, current_session_messages: list[PromptMessage] | None = None) -> str:
         """
         Organize historic prompt
         """
@@ -33,7 +41,13 @@ class CotCompletionAgentRunner(CotAgentRunner):
             if isinstance(message, UserPromptMessage):
                 historic_prompt += f"Question: {message.content}\n\n"
             elif isinstance(message, AssistantPromptMessage):
-                historic_prompt += message.content + "\n\n"
+                if isinstance(message.content, str):
+                    historic_prompt += message.content + "\n\n"
+                elif isinstance(message.content, list):
+                    for content in message.content:
+                        if not isinstance(content, TextPromptMessageContent):
+                            continue
+                        historic_prompt += content.data
 
         return historic_prompt
 
@@ -50,7 +64,7 @@ class CotCompletionAgentRunner(CotAgentRunner):
         # organize current assistant messages
         agent_scratchpad = self._agent_scratchpad
         assistant_prompt = ""
-        for unit in agent_scratchpad:
+        for unit in agent_scratchpad or []:
             if unit.is_final():
                 assistant_prompt += f"Final Answer: {unit.agent_response}"
             else:

@@ -1,12 +1,12 @@
 import type { ComponentProps, FC } from 'react'
-import classNames from '@/utils/classnames'
+import { cn } from '@langgenius/dify-ui/cn'
 
 type SkeletonProps = ComponentProps<'div'>
 
-export const SkeletonContanier: FC<SkeletonProps> = (props) => {
+export const SkeletonContainer: FC<SkeletonProps> = (props) => {
   const { className, children, ...rest } = props
   return (
-    <div className={classNames('flex flex-col gap-1', className)} {...rest}>
+    <div className={cn('flex flex-col gap-1', className)} {...rest}>
       {children}
     </div>
   )
@@ -15,7 +15,7 @@ export const SkeletonContanier: FC<SkeletonProps> = (props) => {
 export const SkeletonRow: FC<SkeletonProps> = (props) => {
   const { className, children, ...rest } = props
   return (
-    <div className={classNames('flex items-center gap-2', className)} {...rest}>
+    <div className={cn('flex items-center gap-2', className)} {...rest}>
       {children}
     </div>
   )
@@ -24,17 +24,21 @@ export const SkeletonRow: FC<SkeletonProps> = (props) => {
 export const SkeletonRectangle: FC<SkeletonProps> = (props) => {
   const { className, children, ...rest } = props
   return (
-    <div className={classNames('h-2 rounded-sm opacity-20 bg-text-tertiary my-1', className)} {...rest}>
+    <div className={cn('my-1 h-2 rounded-xs bg-text-quaternary opacity-20', className)} {...rest}>
       {children}
     </div>
   )
 }
 
-export const SkeletonPoint: FC = () =>
-  <div className='text-text-quaternary text-xs font-medium'>·</div>
-
-/** Usage
- * <SkeletonContanier>
+export const SkeletonPoint: FC<SkeletonProps> = (props) => {
+  const { className, ...rest } = props
+  return (
+    <div className={cn('text-xs font-medium text-text-quaternary', className)} {...rest}>·</div>
+  )
+}
+/**
+ * Usage
+ * <SkeletonContainer>
  *  <SkeletonRow>
  *    <SkeletonRectangle className="w-96" />
  *    <SkeletonPoint />

@@ -1,23 +1,28 @@
+import {
+  RiExternalLinkLine,
+  RiPuzzle2Line,
+} from '@remixicon/react'
 import { useTranslation } from 'react-i18next'
-import { Webhooks } from '@/app/components/base/icons/src/vender/line/development'
-import { BookOpen01 } from '@/app/components/base/icons/src/vender/line/education'
+import { useDocLink } from '@/context/i18n'
 
 const Empty = () => {
   const { t } = useTranslation()
+  const docLink = useDocLink()
 
   return (
-    <div className='mb-2 p-6 rounded-2xl bg-gray-50'>
-      <div className='flex items-center justify-center mb-3 w-12 h-12 rounded-[10px] border border-[#EAECF5]'>
-        <Webhooks className='w-6 h-6 text-gray-500' />
+    <div className="mb-2 rounded-xl bg-background-section p-6">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[10px] border-[0.5px] border-components-card-border bg-components-card-bg-alt shadow-lg backdrop-blur-xs">
+        <RiPuzzle2Line className="h-5 w-5 text-text-accent" />
       </div>
-      <div className='mb-2 text-sm text-gray-600'>{t('common.apiBasedExtension.title')}</div>
+      <div className="mb-1 system-sm-medium text-text-secondary">{t('apiBasedExtension.title', { ns: 'common' })}</div>
       <a
-        className='flex items-center mb-2 h-[18px] text-xs text-primary-600'
-        href={t('common.apiBasedExtension.linkUrl') || '/'}
-        target='_blank' rel='noopener noreferrer'
+        className="flex items-center system-xs-regular text-text-accent"
+        href={docLink('/use-dify/workspace/api-extension/api-extension')}
+        target="_blank"
+        rel="noopener noreferrer"
       >
-        <BookOpen01 className='mr-1 w-3 h-3' />
-        {t('common.apiBasedExtension.link')}
+        {t('apiBasedExtension.link', { ns: 'common' })}
+        <RiExternalLinkLine className="ml-1 h-3 w-3" />
       </a>
     </div>
   )

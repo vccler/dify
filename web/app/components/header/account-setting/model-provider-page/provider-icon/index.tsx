@@ -1,5 +1,11 @@
 import type { FC } from 'react'
 import type { ModelProvider } from '../declarations'
+import { cn } from '@langgenius/dify-ui/cn'
+import { AnthropicDark, AnthropicLight } from '@/app/components/base/icons/src/public/llm'
+import { Openai } from '@/app/components/base/icons/src/vender/other'
+import useTheme from '@/hooks/use-theme'
+import { renderI18nObject } from '@/i18n-config'
+import { Theme } from '@/types/app'
 import { useLanguage } from '../hooks'
 
 type ProviderIconProps = {
@@ -10,22 +16,40 @@ const ProviderIcon: FC<ProviderIconProps> = ({
   provider,
   className,
 }) => {
+  const { theme } = useTheme()
   const language = useLanguage()
 
-  if (provider.icon_large) {
+  if (provider.provider === 'langgenius/anthropic/anthropic') {
     return (
-      <img
-        alt='provider-icon'
-        src={`${provider.icon_large[language] || provider.icon_large.en_US}`}
-        className={`w-auto h-6 ${className}`}
-      />
+      <div className={cn('py-[7px]', className)}>
+        {theme === Theme.dark && <AnthropicLight className="h-2.5 w-[90px]" />}
+        {theme === Theme.light && <AnthropicDark className="h-2.5 w-[90px]" />}
+      </div>
+    )
+  }
+
+  if (provider.provider === 'langgenius/openai/openai') {
+    return (
+      <div className={className}>
+        <Openai className="h-6 w-auto text-text-inverted-dimmed" />
+      </div>
     )
   }
 
   return (
-    <div className={`inline-flex items-center ${className}`}>
-      <div className='text-xs font-semibold text-black'>
-        {provider.label[language] || provider.label.en_US}
+    <div className={cn('inline-flex items-center gap-2', className)}>
+      <img
+        alt="provider-icon"
+        src={renderI18nObject(
+          theme === Theme.dark && provider.icon_small_dark
+            ? provider.icon_small_dark
+            : provider.icon_small,
+          language,
+        )}
+        className="h-6 w-6"
+      />
+      <div className="system-md-semibold text-text-primary">
+        {renderI18nObject(provider.label, language)}
       </div>
     </div>
   )

@@ -1,19 +1,21 @@
+import type {
+  Node,
+} from '../../../../types'
+import { isEqual } from 'es-toolkit/predicate'
 import { memo, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   getConnectedEdges,
   getOutgoers,
-  useEdges,
-  useStoreApi,
+  useStore,
 } from 'reactflow'
-import { useToolIcon } from '../../../../hooks'
+import { ErrorHandleTypeEnum } from '@/app/components/workflow/nodes/_base/components/error-handle/types'
+import { hasErrorHandleNode } from '@/app/components/workflow/utils'
 import BlockIcon from '../../../../block-icon'
-import type {
-  Node,
-} from '../../../../types'
+import { useToolIcon } from '../../../../hooks'
 import { BlockEnum } from '../../../../types'
-import Line from './line'
 import Container from './container'
+import Line from './line'
 
 type NextStepProps = {
   selectedNode: Node
@@ -24,67 +26,102 @@ const NextStep = ({
   const { t } = useTranslation()
   const data = selectedNode.data
   const toolIcon = useToolIcon(data)
-  const store = useStoreApi()
   const branches = useMemo(() => {
     return data._targetBranches || []
   }, [data])
-  const nodeWithBranches = data.type === BlockEnum.IfElse || data.type === BlockEnum.QuestionClassifier
-  const edges = useEdges()
-  const outgoers = getOutgoers(selectedNode as Node, store.getState().getNodes(), edges)
+  const edges = useStore(s => s.edges.map(edge => ({
+    id: edge.id,
+    source: edge.source,
+    sourceHandle: edge.sourceHandle,
+    target: edge.target,
+    targetHandle: edge.targetHandle,
+  })), isEqual)
+  const nodes = useStore(s => s.getNodes().map(node => ({
+    id: node.id,
+    data: node.data,
+  })), isEqual)
+  const outgoers = getOutgoers(selectedNode as Node, nodes as Node[], edges)
   const connectedEdges = getConnectedEdges([selectedNode] as Node[], edges).filter(edge => edge.source === selectedNode!.id)
 
-  const branchesOutgoers = useMemo(() => {
-    if (!branches?.length)
-      return []
+  const list = useMemo(() => {
+    const resolveNextNodes = (connected: typeof connectedEdges) => {
+      return connected.reduce<Node[]>((acc, edge) => {
+        const nextNode = outgoers.find(outgoer => outgoer.id === edge.target)
+        if (nextNode)
+          acc.push(nextNode)
+        return acc
+      }, [])
+    }
+    let items = []
+    if (branches?.length) {
+      items = branches.map((branch, index) => {
+        const connected = connectedEdges.filter(edge => edge.sourceHandle === branch.id)
+        const nextNodes = resolveNextNodes(connected)
 
-    return branches.map((branch) => {
-      const connected = connectedEdges.filter(edge => edge.sourceHandle === branch.id)
-      const nextNodes = connected.map(edge => outgoers.find(outgoer => outgoer.id === edge.target)!)
+        return {
+          branch: {
+            ...branch,
+            name: data.type === BlockEnum.QuestionClassifier ? `${t('nodes.questionClassifiers.class', { ns: 'workflow' })} ${index + 1}` : branch.name,
+          },
+          nextNodes,
+        }
+      })
+    }
+    else {
+      const connected = connectedEdges.filter(edge => edge.sourceHandle === 'source')
+      const nextNodes = resolveNextNodes(connected)
 
-      return {
-        branch,
+      items = [{
+        branch: {
+          id: '',
+          name: '',
+        },
         nextNodes,
+      }]
+
+      if (data.error_strategy === ErrorHandleTypeEnum.failBranch && hasErrorHandleNode(data.type)) {
+        const connected = connectedEdges.filter(edge => edge.sourceHandle === ErrorHandleTypeEnum.failBranch)
+        const nextNodes = resolveNextNodes(connected)
+
+        items.push({
+          branch: {
+            id: ErrorHandleTypeEnum.failBranch,
+            name: t('common.onFailure', { ns: 'workflow' }),
+          },
+          nextNodes,
+        })
       }
-    })
-  }, [branches, connectedEdges, outgoers])
+    }
+
+    return items
+  }, [branches, connectedEdges, data.error_strategy, data.type, outgoers, t])
 
   return (
-    <div className='flex py-1'>
-      <div className='shrink-0 relative flex items-center justify-center w-9 h-9 bg-background-default rounded-lg border-[0.5px] border-divider-regular shadow-xs'>
+    <div className="flex py-1">
+      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-[0.5px] border-divider-regular bg-background-default shadow-xs">
         <BlockIcon
           type={selectedNode!.data.type}
           toolIcon={toolIcon}
         />
       </div>
       <Line
-        list={nodeWithBranches ? branchesOutgoers.map(item => item.nextNodes.length + 1) : [1]}
+        list={list.length ? list.map(item => item.nextNodes.length + 1) : [1]}
       />
-      <div className='grow space-y-2'>
+      <div className="grow space-y-2">
         {
-          !nodeWithBranches && (
-            <Container
-              nodeId={selectedNode!.id}
-              nodeData={selectedNode!.data}
-              sourceHandle='source'
-              nextNodes={outgoers}
-            />
-          )
-        }
-        {
-          nodeWithBranches && (
-            branchesOutgoers.map((item, index) => {
-              return (
-                <Container
-                  key={item.branch.id}
-                  nodeId={selectedNode!.id}
-                  nodeData={selectedNode!.data}
-                  sourceHandle={item.branch.id}
-                  nextNodes={item.nextNodes}
-                  branchName={item.branch.name || `${t('workflow.nodes.questionClassifiers.class')} ${index + 1}`}
-                />
-              )
-            })
-          )
+          list.map((item, index) => {
+            return (
+              <Container
+                key={index}
+                nodeId={selectedNode!.id}
+                nodeData={selectedNode!.data}
+                sourceHandle={item.branch.id}
+                nextNodes={item.nextNodes}
+                branchName={item.branch.name}
+                isFailBranch={item.branch.id === ErrorHandleTypeEnum.failBranch}
+              />
+            )
+          })
         }
       </div>
     </div>

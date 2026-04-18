@@ -1,22 +1,21 @@
 import type { FC } from 'react'
-import React from 'react'
-import { useTranslation } from 'react-i18next'
-import RemoveEffectVarConfirm from '../_base/components/remove-effect-var-confirm'
-import useConfig from './use-config'
 import type { CodeNodeType } from './types'
-import { CodeLanguage } from './types'
-import { extractFunctionParams, extractReturnType } from './code-parser'
-import VarList from '@/app/components/workflow/nodes/_base/components/variable/var-list'
-import OutputVarList from '@/app/components/workflow/nodes/_base/components/variable/output-var-list'
-import AddButton from '@/app/components/base/button/add-button'
-import Field from '@/app/components/workflow/nodes/_base/components/field'
-import Split from '@/app/components/workflow/nodes/_base/components/split'
+import type { NodePanelProps } from '@/app/components/workflow/types'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@langgenius/dify-ui/tooltip'
+import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/app/components/workflow/nodes/_base/components/editor/code-editor'
+import Field from '@/app/components/workflow/nodes/_base/components/field'
 import TypeSelector from '@/app/components/workflow/nodes/_base/components/selector'
-import { type NodePanelProps } from '@/app/components/workflow/types'
-import BeforeRunForm from '@/app/components/workflow/nodes/_base/components/before-run-form'
-import ResultPanel from '@/app/components/workflow/run/result-panel'
-const i18nPrefix = 'workflow.nodes.code'
+import Split from '@/app/components/workflow/nodes/_base/components/split'
+import OutputVarList from '@/app/components/workflow/nodes/_base/components/variable/output-var-list'
+import VarList from '@/app/components/workflow/nodes/_base/components/variable/var-list'
+import RemoveEffectVarConfirm from '../_base/components/remove-effect-var-confirm'
+import { extractFunctionParams, extractReturnType } from './code-parser'
+import { CodeLanguage } from './types'
+import useConfig from './use-config'
+
+const i18nPrefix = 'nodes.code'
 
 const codeLanguages = [
   {
@@ -42,6 +41,7 @@ const Panel: FC<NodePanelProps<CodeNodeType>> = ({
     handleVarListChange,
     handleAddVariable,
     handleRemoveVariable,
+    handleSyncFunctionSignature,
     handleCodeChange,
     handleCodeLanguageChange,
     handleVarsChange,
@@ -50,16 +50,6 @@ const Panel: FC<NodePanelProps<CodeNodeType>> = ({
     isShowRemoveVarConfirm,
     hideRemoveVarConfirm,
     onRemoveVarConfirm,
-    // single run
-    isShowSingleRun,
-    hideSingleRun,
-    runningStatus,
-    handleRun,
-    handleStop,
-    runResult,
-    varInputs,
-    inputVarValues,
-    setInputVarValues,
   } = useConfig(id, data)
 
   const handleGeneratedCode = (value: string) => {
@@ -75,12 +65,30 @@ const Panel: FC<NodePanelProps<CodeNodeType>> = ({
   }
 
   return (
-    <div className='mt-2'>
-      <div className='px-4 pb-4 space-y-4'>
+    <div className="mt-2">
+      <div className="space-y-4 px-4 pb-4">
         <Field
-          title={t(`${i18nPrefix}.inputVars`)}
+          title={t(`${i18nPrefix}.inputVars`, { ns: 'workflow' })}
           operations={
-            !readOnly ? <AddButton onClick={handleAddVariable} /> : undefined
+            !readOnly
+              ? (
+                  <div className="flex gap-2">
+                    <Tooltip>
+                      <TooltipTrigger
+                        className="cursor-pointer rounded-md p-1 select-none hover:bg-state-base-hover"
+                        onClick={handleSyncFunctionSignature}
+                        data-testid="sync-button"
+                      >
+                        <span className="i-ri-refresh-line h-4 w-4 text-text-tertiary" />
+                      </TooltipTrigger>
+                      <TooltipContent>{t(`${i18nPrefix}.syncFunctionSignature`, { ns: 'workflow' })}</TooltipContent>
+                    </Tooltip>
+                    <div className="cursor-pointer rounded-md p-1 select-none hover:bg-state-base-hover" onClick={handleAddVariable} data-testid="add-button">
+                      <span className="i-ri-add-line h-4 w-4 text-text-tertiary" />
+                    </div>
+                  </div>
+                )
+              : undefined
           }
         >
           <VarList
@@ -94,15 +102,16 @@ const Panel: FC<NodePanelProps<CodeNodeType>> = ({
         </Field>
         <Split />
         <CodeEditor
+          nodeId={id}
           isInNode
           readOnly={readOnly}
-          title={
+          title={(
             <TypeSelector
               options={codeLanguages}
               value={inputs.code_language}
               onChange={handleCodeLanguageChange}
             />
-          }
+          )}
           language={inputs.code_language}
           value={inputs.code}
           onChange={handleCodeChange}
@@ -111,14 +120,16 @@ const Panel: FC<NodePanelProps<CodeNodeType>> = ({
         />
       </div>
       <Split />
-      <div className='px-4 pt-4 pb-2'>
+      <div className="px-4 pt-4 pb-2">
         <Field
-          title={t(`${i18nPrefix}.outputVars`)}
-          operations={
-            <AddButton onClick={handleAddOutputVariable} />
-          }
+          title={t(`${i18nPrefix}.outputVars`, { ns: 'workflow' })}
+          operations={(
+            <div className="cursor-pointer rounded-md p-1 select-none hover:bg-state-base-hover" onClick={handleAddOutputVariable} data-testid="add-button">
+              <span className="i-ri-add-line h-4 w-4 text-text-tertiary" />
+            </div>
+          )}
+          required
         >
-
           <OutputVarList
             readonly={readOnly}
             outputs={inputs.outputs}
@@ -128,31 +139,12 @@ const Panel: FC<NodePanelProps<CodeNodeType>> = ({
           />
         </Field>
       </div>
-      {
-        isShowSingleRun && (
-          <BeforeRunForm
-            nodeName={inputs.title}
-            onHide={hideSingleRun}
-            forms={[
-              {
-                inputs: varInputs,
-                values: inputVarValues,
-                onChange: setInputVarValues,
-              },
-            ]}
-            runningStatus={runningStatus}
-            onRun={handleRun}
-            onStop={handleStop}
-            result={<ResultPanel {...runResult} showSteps={false} />}
-          />
-        )
-      }
       <RemoveEffectVarConfirm
         isShow={isShowRemoveVarConfirm}
         onCancel={hideRemoveVarConfirm}
         onConfirm={onRemoveVarConfirm}
       />
-    </div >
+    </div>
   )
 }
 

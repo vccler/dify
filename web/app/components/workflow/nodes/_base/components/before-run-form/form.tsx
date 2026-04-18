@@ -1,13 +1,13 @@
 'use client'
 import type { FC } from 'react'
-import React, { useCallback, useMemo } from 'react'
-import produce from 'immer'
 import type { InputVar } from '../../../../types'
-import FormItem from './form-item'
-import cn from '@/utils/classnames'
-import { InputVarType } from '@/app/components/workflow/types'
-import AddButton from '@/app/components/base/button/add-button'
+import { cn } from '@langgenius/dify-ui/cn'
+import { produce } from 'immer'
+import * as React from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { RETRIEVAL_OUTPUT_STRUCT } from '@/app/components/workflow/constants'
+import { InputVarType } from '@/app/components/workflow/types'
+import FormItem from './form-item'
 
 export type Props = {
   className?: string
@@ -46,22 +46,29 @@ const Form: FC<Props> = ({
 
     return m
   }, [inputs])
-
+  const valuesRef = useRef(values)
+  useEffect(() => {
+    valuesRef.current = values
+  }, [values])
   const handleChange = useCallback((key: string) => {
     const mKeys = mapKeysWithSameValueSelector.get(key) ?? [key]
     return (value: any) => {
-      const newValues = produce(values, (draft) => {
+      const newValues = produce(valuesRef.current, (draft) => {
         for (const k of mKeys)
           draft[k] = value
       })
       onChange(newValues)
     }
-  }, [values, onChange, mapKeysWithSameValueSelector])
-  const isArrayLikeType = [InputVarType.contexts, InputVarType.iterator].includes(inputs[0]?.type)
+  }, [valuesRef, onChange, mapKeysWithSameValueSelector])
+  const isArrayLikeType = [InputVarType.contexts, InputVarType.iterator].includes(inputs[0]?.type!)
+  const isIteratorItemFile = inputs[0]?.type === InputVarType.iterator && inputs[0]?.isFileItem
+
   const isContext = inputs[0]?.type === InputVarType.contexts
   const handleAddContext = useCallback(() => {
     const newValues = produce(values, (draft: any) => {
-      const key = inputs[0].variable
+      const key = inputs[0]!.variable
+      if (!draft[key])
+        draft[key] = []
       draft[key].push(isContext ? RETRIEVAL_OUTPUT_STRUCT : '')
     })
     onChange(newValues)
@@ -70,10 +77,12 @@ const Form: FC<Props> = ({
   return (
     <div className={cn(className, 'space-y-2')}>
       {label && (
-        <div className='mb-1 flex items-center justify-between'>
-          <div className='flex items-center h-6 system-xs-medium-uppercase text-text-tertiary'>{label}</div>
-          {isArrayLikeType && (
-            <AddButton onClick={handleAddContext} />
+        <div className="mb-1 flex items-center justify-between">
+          <div className="flex h-6 items-center system-xs-medium-uppercase text-text-tertiary">{label}</div>
+          {isArrayLikeType && !isIteratorItemFile && (
+            <div className="cursor-pointer rounded-md p-1 select-none hover:bg-state-base-hover" onClick={handleAddContext} data-testid="add-button">
+              <span className="i-ri-add-line h-4 w-4 text-text-tertiary" />
+            </div>
           )}
         </div>
       )}

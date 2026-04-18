@@ -1,6 +1,12 @@
 import type { DataSourceNotionPage, DataSourceProvider } from './common'
-import type { AppIconType, AppMode, RetrievalConfig } from '@/types/app'
+import type { DatasourceType } from './pipeline'
 import type { Tag } from '@/app/components/base/tag-management/constant'
+import type { IndexingType } from '@/app/components/datasets/create/step-two'
+import type { MetadataItemWithValue } from '@/app/components/datasets/metadata/types'
+import type { MetadataFilteringVariableType } from '@/app/components/workflow/nodes/knowledge-retrieval/types'
+import type { AppIconType, AppModeEnum, RetrievalConfig, TransferMethod } from '@/types/app'
+import type { I18nKeysByPrefix } from '@/types/i18n'
+import { ExternalKnowledgeBase, General, ParentChild, Qa } from '@/app/components/base/icons/src/public/knowledge/dataset-card'
 
 export enum DataSourceType {
   FILE = 'upload_file',
@@ -8,22 +14,58 @@ export enum DataSourceType {
   WEB = 'website_crawl',
 }
 
-export type DatasetPermission = 'only_me' | 'all_team_members' | 'partial_members'
+export enum DatasetPermission {
+  onlyMe = 'only_me',
+  allTeamMembers = 'all_team_members',
+  partialMembers = 'partial_members',
+}
+
+export enum ChunkingMode {
+  text = 'text_model', // General text
+  qa = 'qa_model', // General QA
+  parentChild = 'hierarchical_model', // Parent-Child
+  // graph = 'graph', // todo: Graph RAG
+}
+
+export type MetadataInDoc = {
+  value: string
+  id: string
+  type: MetadataFilteringVariableType
+  name: string
+}
+
+export type IconInfo = {
+  icon: string
+  icon_background?: string
+  icon_type: AppIconType
+  icon_url?: string
+}
+
+export type SummaryIndexSetting = {
+  enable?: boolean
+  model_name?: string
+  model_provider_name?: string
+  summary_prompt?: string
+}
 
 export type DataSet = {
   id: string
   name: string
-  icon: string
-  icon_background: string
+  indexing_status: DocumentIndexingStatus
+  icon_info: IconInfo
   description: string
   permission: DatasetPermission
   data_source_type: DataSourceType
-  indexing_technique: 'high_quality' | 'economy'
+  indexing_technique: IndexingType
+  author_name?: string
   created_by: string
   updated_by: string
   updated_at: number
   app_count: number
+  doc_form: ChunkingMode
   document_count: number
+  total_document_count: number
+  total_available_documents?: number
   word_count: number
   provider: string
   embedding_model: string
@@ -32,7 +74,7 @@ export type DataSet = {
   retrieval_model_dict: RetrievalConfig
   retrieval_model: RetrievalConfig
   tags: Tag[]
-  partial_member_list?: any[]
+  partial_member_list?: string[]
   external_knowledge_info: {
     external_knowledge_id: string
     external_knowledge_api_id: string
@@ -44,6 +86,15 @@ export type DataSet = {
     score_threshold: number
     score_threshold_enabled: boolean
   }
+  built_in_field_enabled: boolean
+  doc_metadata?: MetadataInDoc[]
+  keyword_number?: number
+  pipeline_id?: string
+  is_published?: boolean // Indicates if the pipeline is published
+  runtime_mode: 'rag_pipeline' | 'general'
+  enable_api: boolean // Indicates if the service API is enabled
+  is_multimodal: boolean // Indicates if the dataset supports multimodal
+  summary_index_setting?: SummaryIndexSetting
 }
 
 export type ExternalAPIItem = {
@@ -55,7 +106,7 @@ export type ExternalAPIItem = {
     endpoint: string
     api_key: string
   }
-  dataset_bindings: { id: string; name: string }[]
+  dataset_bindings: { id: string, name: string }[]
   created_by: string
   created_at: string
 }
@@ -95,6 +146,12 @@ export type CustomFile = File & {
   created_at?: number
 }
 
+export type DocumentItem = {
+  id: string
+  name: string
+  extension: string
+}
+
 export type CrawlOptions = {
   crawl_sub_pages: boolean
   only_main_content: boolean
@@ -112,10 +169,41 @@ export type CrawlResultItem = {
   source_url: string
 }
 
+export type CrawlResult = {
+  data: CrawlResultItem[]
+  time_consuming: number | string
+}
+
+export enum CrawlStep {
+  init = 'init',
+  running = 'running',
+  finished = 'finished',
+}
+
 export type FileItem = {
   fileID: string
   file: CustomFile
   progress: number
+}
+
+export type FetchDatasetsParams = {
+  url: string
+  params: {
+    page: number
+    ids?: string[]
+    tag_ids?: string[]
+    limit?: number
+    include_all?: boolean
+    keyword?: string
+  }
+}
+
+export type DatasetListRequest = {
+  initialPage: number
+  tag_ids?: string[]
+  limit: number
+  include_all?: boolean
+  keyword?: string
 }
 
 export type DataSetListResponse = {
@@ -144,7 +232,7 @@ export type IndexingEstimateResponse = {
   total_price: number
   currency: string
   total_segments: number
-  preview: string[]
+  preview: Array<{ content: string, child_chunks: string[], summary?: string }>
   qa_preview?: QA[]
 }
 
@@ -170,17 +258,25 @@ export type IndexingStatusBatchResponse = {
   data: IndexingStatusResponse[]
 }
 
-export type ProcessMode = 'automatic' | 'custom'
+export enum ProcessMode {
+  general = 'custom',
+  parentChild = 'hierarchical',
+}
+
+export type ParentMode = 'full-doc' | 'paragraph'
 
 export type ProcessRuleResponse = {
   mode: ProcessMode
   rules: Rules
   limits: Limits
+  summary_index_setting?: SummaryIndexSetting
 }
 
 export type Rules = {
   pre_processing_rules: PreProcessingRule[]
   segmentation: Segmentation
+  parent_mode: ParentMode
+  subchunk_segmentation: Segmentation
 }
 
 export type Limits = {
@@ -195,7 +291,7 @@ export type PreProcessingRule = {
 export type Segmentation = {
   separator: string
   max_tokens: number
-  chunk_overlap: number
+  chunk_overlap?: number
 }
 
 export const DocumentIndexingStatusList = [
@@ -224,7 +320,7 @@ export const DisplayStatusList = [
 
 export type DocumentDisplayStatus = typeof DisplayStatusList[number]
 
-export type DataSourceInfo = {
+export type LegacyDataSourceInfo = {
   upload_file: {
     id: string
     name: string
@@ -240,26 +336,75 @@ export type DataSourceInfo = {
   provider?: DataSourceProvider
   job_id: string
   url: string
+  credential_id?: string
 }
+
+export type LocalFileInfo = {
+  extension: string
+  mime_type: string
+  name: string
+  related_id: string
+  size: number
+  transfer_method: TransferMethod
+  url: string
+}
+
+export type WebsiteCrawlInfo = {
+  content: string
+  credential_id: string
+  description: string
+  source_url: string
+  title: string
+  provider?: string
+  job_id?: string
+}
+
+export type OnlineDocumentInfo = {
+  credential_id: string
+  workspace_id: string
+  page: {
+    last_edited_time: string
+    page_icon: DataSourceNotionPage['page_icon']
+    page_id: string
+    page_name: string
+    parent_id: string
+    type: string
+  }
+}
+
+export type OnlineDriveInfo = {
+  bucket: string
+  credential_id: string
+  id: string
+  name: string
+  type: 'file' | 'folder'
+}
+
+export type UploadFileIdInfo = {
+  upload_file_id: string
+}
+
+export type DataSourceInfo = LegacyDataSourceInfo | LocalFileInfo | OnlineDocumentInfo | WebsiteCrawlInfo | UploadFileIdInfo
 
 export type InitialDocumentDetail = {
   id: string
   batch: string
   position: number
   dataset_id: string
-  data_source_type: DataSourceType
+  data_source_type: DataSourceType | DatasourceType
   data_source_info: DataSourceInfo
   dataset_process_rule_id: string
   name: string
-  created_from: 'api' | 'web'
+  created_from: 'rag-pipeline' | 'api' | 'web'
   created_by: string
   created_at: number
   indexing_status: DocumentIndexingStatus
   display_status: DocumentDisplayStatus
   completed_segments?: number
   total_segments?: number
-  doc_form: 'text_model' | 'qa_model'
+  doc_form: ChunkingMode
   doc_language: string
+  summary_index_status?: string
 }
 
 export type SimpleDocumentDetail = InitialDocumentDetail & {
@@ -276,6 +421,7 @@ export type SimpleDocumentDetail = InitialDocumentDetail & {
       extension: string
     }
   }
+  doc_metadata?: MetadataItemWithValue[]
 }
 
 export type DocumentListResponse = {
@@ -288,10 +434,11 @@ export type DocumentListResponse = {
 
 export type DocumentReq = {
   original_document_id?: string
-  indexing_technique?: string
-  doc_form: 'text_model' | 'qa_model'
+  indexing_technique?: IndexingType
+  doc_form: ChunkingMode
   doc_language: string
   process_rule: ProcessRule
+  summary_index_setting?: SummaryIndexSetting
 }
 
 export type CreateDocumentReq = DocumentReq & {
@@ -324,15 +471,13 @@ export type DataSource = {
 export type NotionInfo = {
   workspace_id: string
   pages: DataSourceNotionPage[]
-}
-export type NotionPage = {
-  page_id: string
-  type: string
+  credential_id: string
 }
 
 export type ProcessRule = {
-  mode: string
+  mode: ProcessMode
   rules: Rules
+  summary_index_setting?: SummaryIndexSetting
 }
 
 export type createDocumentResponse = {
@@ -363,6 +508,8 @@ export type FullDocumentDetail = SimpleDocumentDetail & {
   doc_type?: DocType | null | 'others'
   doc_metadata?: DocMetadata | null
   segment_count: number
+  dataset_process_rule: ProcessRule
+  document_process_rule: ProcessRule
   [key: string]: any
 }
 
@@ -398,13 +545,13 @@ export type DocumentDetailResponse = FullDocumentDetail
 export const SEGMENT_STATUS_LIST = ['waiting', 'completed', 'error', 'indexing']
 export type SegmentStatus = typeof SEGMENT_STATUS_LIST[number]
 
-export type SegmentsQuery = {
-  last_id?: string
-  limit: number
-  // status?: SegmentStatus
-  hit_count_gte?: number
-  keyword?: string
-  enabled?: boolean
+export type Attachment = {
+  id: string
+  name: string
+  size: number
+  extension: string
+  mime_type: string
+  source_url: string
 }
 
 export type SegmentDetailModel = {
@@ -412,6 +559,7 @@ export type SegmentDetailModel = {
   position: number
   document_id: string
   content: string
+  sign_content: string
   word_count: number
   tokens: number
   keywords: string[]
@@ -429,6 +577,10 @@ export type SegmentDetailModel = {
   error: string | null
   stopped_at: number
   answer?: string
+  summary?: string
+  child_chunks?: ChildChunkDetail[]
+  updated_at: number
+  attachments: Attachment[]
 }
 
 export type SegmentsResponse = {
@@ -436,22 +588,40 @@ export type SegmentsResponse = {
   has_more: boolean
   limit: number
   total: number
+  total_pages: number
+  page: number
+}
+
+export type Query = {
+  content: string
+  content_type: 'text_query' | 'image_query'
+  file_info: Attachment | null
 }
 
 export type HitTestingRecord = {
   id: string
-  content: string
   source: 'app' | 'hit_testing' | 'plugin'
   source_app_id: string
   created_by_role: 'account' | 'end_user'
   created_by: string
   created_at: number
+  queries: Query[]
 }
 
+export type HitTestingChildChunk = {
+  id: string
+  content: string
+  position: number
+  score: number
+}
 export type HitTesting = {
   segment: Segment
+  content: Segment
   score: number
   tsne_position: TsnePosition
+  child_chunks: HitTestingChildChunk[] | null
+  files: Attachment[]
+  summary?: string
 }
 
 export type ExternalKnowledgeBaseHitTesting = {
@@ -468,12 +638,14 @@ export type Segment = {
   id: string
   document: Document
   content: string
+  sign_content: string
   position: number
   word_count: number
   tokens: number
   keywords: string[]
   hit_count: number
   index_node_hash: string
+  answer: string
 }
 
 export type Document = {
@@ -514,7 +686,7 @@ export type ExternalKnowledgeBaseHitTestingResponse = {
 export type RelatedApp = {
   id: string
   name: string
-  mode: AppMode
+  mode: AppModeEnum
   icon_type: AppIconType | null
   icon: string
   icon_background: string
@@ -529,12 +701,10 @@ export type RelatedAppResponse = {
 export type SegmentUpdater = {
   content: string
   answer?: string
+  summary?: string
   keywords?: string[]
-}
-
-export enum DocForm {
-  TEXT = 'text_model',
-  QA = 'qa_model',
+  regenerate_child_chunks?: boolean
+  attachment_ids?: string[]
 }
 
 export type ErrorDocsResponse = {
@@ -578,4 +748,101 @@ export const DEFAULT_WEIGHTED_SCORE = {
     semantic: 0.7,
     keyword: 0.3,
   },
+}
+
+export type ChildChunkType = 'automatic' | 'customized'
+
+export type ChildChunkDetail = {
+  id: string
+  position: number
+  segment_id: string
+  content: string
+  word_count: number
+  created_at: number
+  updated_at: number
+  type: ChildChunkType
+}
+
+export type ChildSegmentsResponse = {
+  data: ChildChunkDetail[]
+  total: number
+  total_pages: number
+  page: number
+  limit: number
+}
+
+// Used in api url
+export enum DocumentActionType {
+  enable = 'enable',
+  disable = 'disable',
+  archive = 'archive',
+  unArchive = 'un_archive',
+  delete = 'delete',
+  summary = 'summary',
+}
+
+export type UpdateDocumentBatchParams = {
+  datasetId: string
+  documentId?: string
+  documentIds?: string[] | string
+}
+
+export type BatchImportResponse = {
+  job_id: string
+  job_status: string
+}
+
+export const DOC_FORM_ICON_WITH_BG: Record<ChunkingMode | 'external', React.ComponentType<{ className: string }>> = {
+  [ChunkingMode.text]: General,
+  [ChunkingMode.qa]: Qa,
+  [ChunkingMode.parentChild]: ParentChild,
+  // [ChunkingMode.graph]: Graph, // todo: Graph RAG
+  external: ExternalKnowledgeBase,
+}
+
+type ChunkingModeText = I18nKeysByPrefix<'dataset', 'chunkingMode.'>
+
+export const DOC_FORM_TEXT: Record<ChunkingMode, ChunkingModeText> = {
+  [ChunkingMode.text]: 'general',
+  [ChunkingMode.qa]: 'qa',
+  [ChunkingMode.parentChild]: 'parentChild',
+  // [ChunkingMode.graph]: 'graph', // todo: Graph RAG
+}
+
+export type CreateDatasetReq = {
+  yaml_content?: string
+}
+
+export type CreateDatasetResponse = {
+  id: string
+  name: string
+  description: string
+  permission: DatasetPermission
+  indexing_technique: IndexingType
+  created_by: string
+  created_at: number
+  updated_by: string
+  updated_at: number
+  pipeline_id: string
+  dataset_id: string
+}
+
+export type IndexingStatusBatchRequest = {
+  datasetId: string
+  batchId: string
+}
+
+export type HitTestingRequest = {
+  query: string
+  attachment_ids: string[]
+  retrieval_model: RetrievalConfig
+}
+
+export type ExternalKnowledgeBaseHitTestingRequest = {
+  query: string
+  external_retrieval_model: {
+    top_k: number
+    score_threshold: number
+    score_threshold_enabled: boolean
+  }
 }

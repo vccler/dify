@@ -1,19 +1,30 @@
 'use client'
-import type { FC } from 'react'
-import React, { useEffect, useRef, useState } from 'react'
-import { useBoolean } from 'ahooks'
+/**
+ * @deprecated Use `@langgenius/dify-ui/tooltip` instead.
+ * This component will be removed after migration is complete.
+ * See: https://github.com/langgenius/dify/issues/32767
+ */
 import type { OffsetOptions, Placement } from '@floating-ui/react'
+import type { FC } from 'react'
+import { cn } from '@langgenius/dify-ui/cn'
 import { RiQuestionLine } from '@remixicon/react'
-import cn from '@/utils/classnames'
+import { useBoolean } from 'ahooks'
+import * as React from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { PortalToFollowElem, PortalToFollowElemContent, PortalToFollowElemTrigger } from '@/app/components/base/portal-to-follow-elem'
-export type TooltipProps = {
+import { tooltipManager } from './TooltipManager'
+
+type TooltipProps = {
   position?: Placement
   triggerMethod?: 'hover' | 'click'
   triggerClassName?: string
+  triggerTestId?: string
   disabled?: boolean
   popupContent?: React.ReactNode
   children?: React.ReactNode
   popupClassName?: string
+  portalContentClassName?: string
+  noDecoration?: boolean
   offset?: OffsetOptions
   needsDelay?: boolean
   asChild?: boolean
@@ -23,13 +34,16 @@ const Tooltip: FC<TooltipProps> = ({
   position = 'top',
   triggerMethod = 'hover',
   triggerClassName,
+  triggerTestId,
   disabled = false,
   popupContent,
   children,
   popupClassName,
+  portalContentClassName,
+  noDecoration,
   offset,
   asChild = true,
-  needsDelay = false,
+  needsDelay = true,
 }) => {
   const [open, setOpen] = useState(false)
   const [isHoverPopup, {
@@ -52,22 +66,43 @@ const Tooltip: FC<TooltipProps> = ({
     isHoverTriggerRef.current = isHoverTrigger
   }, [isHoverTrigger])
 
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clearCloseTimeout = useCallback(() => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      clearCloseTimeout()
+    }
+  }, [clearCloseTimeout])
+
+  const close = () => setOpen(false)
+
   const handleLeave = (isTrigger: boolean) => {
     if (isTrigger)
       setNotHoverTrigger()
-
     else
       setNotHoverPopup()
 
     // give time to move to the popup
     if (needsDelay) {
-      setTimeout(() => {
-        if (!isHoverPopupRef.current && !isHoverTriggerRef.current)
+      clearCloseTimeout()
+      closeTimeoutRef.current = setTimeout(() => {
+        closeTimeoutRef.current = null
+        if (!isHoverPopupRef.current && !isHoverTriggerRef.current) {
           setOpen(false)
-      }, 500)
+          tooltipManager.clear(close)
+        }
+      }, 300)
     }
     else {
+      clearCloseTimeout()
       setOpen(false)
+      tooltipManager.clear(close)
     }
   }
 
@@ -82,28 +117,38 @@ const Tooltip: FC<TooltipProps> = ({
         onClick={() => triggerMethod === 'click' && setOpen(v => !v)}
         onMouseEnter={() => {
           if (triggerMethod === 'hover') {
+            clearCloseTimeout()
             setHoverTrigger()
+            tooltipManager.register(close)
             setOpen(true)
           }
         }}
         onMouseLeave={() => triggerMethod === 'hover' && handleLeave(true)}
         asChild={asChild}
+        className={!asChild ? triggerClassName : ''}
       >
-        {children || <div className={triggerClassName || 'p-[1px] w-3.5 h-3.5 shrink-0'}><RiQuestionLine className='text-text-quaternary hover:text-text-tertiary w-full h-full' /></div>}
+        {children || <div data-testid={triggerTestId} className={triggerClassName || 'h-3.5 w-3.5 shrink-0 p-px'}><RiQuestionLine className="h-full w-full text-text-quaternary hover:text-text-tertiary" /></div>}
       </PortalToFollowElemTrigger>
       <PortalToFollowElemContent
-        className="z-[9999]"
+        className={cn('z-9999', portalContentClassName || '')}
       >
-        {popupContent && (<div
-          className={cn(
-            'relative px-3 py-2 text-xs font-normal text-gray-700 bg-white rounded-md shadow-lg break-words',
-            popupClassName,
-          )}
-          onMouseEnter={() => triggerMethod === 'hover' && setHoverPopup()}
-          onMouseLeave={() => triggerMethod === 'hover' && handleLeave(false)}
-        >
-          {popupContent}
-        </div>)}
+        {!!popupContent && (
+          <div
+            className={cn(
+              !noDecoration && 'relative max-w-[300px] rounded-md bg-components-panel-bg px-3 py-2 text-left system-xs-regular wrap-break-word text-text-tertiary shadow-lg',
+              popupClassName,
+            )}
+            onMouseEnter={() => {
+              if (triggerMethod === 'hover') {
+                clearCloseTimeout()
+                setHoverPopup()
+              }
+            }}
+            onMouseLeave={() => triggerMethod === 'hover' && handleLeave(false)}
+          >
+            {popupContent}
+          </div>
+        )}
       </PortalToFollowElemContent>
     </PortalToFollowElem>
   )

@@ -1,22 +1,20 @@
 import type { FC } from 'react'
+import type { ModelAndParameter } from '../types'
+import type { InputForm } from '@/app/components/base/chat/chat/type'
+import type { ChatConfig, OnSend } from '@/app/components/base/chat/types'
+import { Avatar } from '@langgenius/dify-ui/avatar'
 import {
   memo,
   useCallback,
   useMemo,
 } from 'react'
-import type { ModelAndParameter } from '../types'
-import {
-  APP_CHAT_WITH_MULTIPLE_MODEL,
-  APP_CHAT_WITH_MULTIPLE_MODEL_RESTART,
-} from '../types'
-import {
-  useConfigFromDebugContext,
-  useFormattingChangedSubscription,
-} from '../hooks'
 import Chat from '@/app/components/base/chat/chat'
 import { useChat } from '@/app/components/base/chat/chat/hooks'
+import { getLastAnswer } from '@/app/components/base/chat/utils'
+import { useFeatures } from '@/app/components/base/features/hooks'
+import { ModelFeatureEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
+import { useAppContext } from '@/context/app-context'
 import { useDebugConfigurationContext } from '@/context/debug-configuration'
-import type { ChatConfig, OnSend } from '@/app/components/base/chat/types'
 import { useEventEmitterContextContext } from '@/context/event-emitter'
 import { useProviderContext } from '@/context/provider-context'
 import {
@@ -24,12 +22,15 @@ import {
   fetchSuggestedQuestions,
   stopChatMessageResponding,
 } from '@/service/debug'
-import Avatar from '@/app/components/base/avatar'
-import { useAppContext } from '@/context/app-context'
-import { ModelFeatureEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
-import { useFeatures } from '@/app/components/base/features/hooks'
-import type { InputForm } from '@/app/components/base/chat/chat/type'
-import { getLastAnswer } from '@/app/components/base/chat/utils'
+import { canFindTool } from '@/utils'
+import {
+  useConfigFromDebugContext,
+  useFormattingChangedSubscription,
+} from '../hooks'
+import {
+  APP_CHAT_WITH_MULTIPLE_MODEL,
+  APP_CHAT_WITH_MULTIPLE_MODEL_RESTART,
+} from '../types'
 
 type ChatItemProps = {
   modelAndParameter: ModelAndParameter
@@ -67,7 +68,6 @@ const ChatItem: FC<ChatItemProps> = ({
   }, [modelConfig.configs.prompt_variables])
   const {
     chatList,
-    chatListRef,
     isResponding,
     handleSend,
     suggestedQuestions,
@@ -102,7 +102,7 @@ const ChatItem: FC<ChatItemProps> = ({
       query: message,
       inputs,
       model_config: configData,
-      parent_message_id: getLastAnswer(chatListRef.current)?.id || null,
+      parent_message_id: getLastAnswer(chatList)?.id || null,
     }
 
     if ((config.file_upload as any).enabled && files?.length && supportVision)
@@ -116,7 +116,7 @@ const ChatItem: FC<ChatItemProps> = ({
         onGetSuggestedQuestions: (responseItemId, getAbortController) => fetchSuggestedQuestions(appId, responseItemId, getAbortController),
       },
     )
-  }, [appId, config, handleSend, inputs, modelAndParameter, textGenerationModelList, chatListRef])
+  }, [appId, chatList, config, handleSend, inputs, modelAndParameter.model, modelAndParameter.parameters, modelAndParameter.provider, textGenerationModelList])
 
   const { eventEmitter } = useEventEmitterContextContext()
   eventEmitter?.useSubscription((v: any) => {
@@ -129,7 +129,7 @@ const ChatItem: FC<ChatItemProps> = ({
   const allToolIcons = useMemo(() => {
     const icons: Record<string, any> = {}
     modelConfig.agentConfig.tools?.forEach((item: any) => {
-      icons[item.tool_name] = collectionList.find((collection: any) => collection.id === item.provider_id)?.icon
+      icons[item.tool_name] = collectionList.find((collection: any) => canFindTool(collection.id, item.provider_id))?.icon
     })
     return icons
   }, [collectionList, modelConfig.agentConfig.tools])
@@ -144,12 +144,12 @@ const ChatItem: FC<ChatItemProps> = ({
       isResponding={isResponding}
       noChatInput
       noStopResponding
-      chatContainerClassName='p-4'
-      chatFooterClassName='p-4 pb-0'
+      chatContainerClassName="p-4"
+      chatFooterClassName="p-4 pb-0"
       suggestedQuestions={suggestedQuestions}
       onSend={doSend}
       showPromptLog
-      questionIcon={<Avatar name={userProfile.name} size={40} />}
+      questionIcon={<Avatar avatar={userProfile.avatar_url} name={userProfile.name} size="xl" />}
       allToolIcons={allToolIcons}
       hideLogModal
       noSpacing

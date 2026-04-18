@@ -13,19 +13,27 @@ class TencentCosStorage(BaseStorage):
         super().__init__()
 
         self.bucket_name = dify_config.TENCENT_COS_BUCKET_NAME
-        config = CosConfig(
-            Region=dify_config.TENCENT_COS_REGION,
-            SecretId=dify_config.TENCENT_COS_SECRET_ID,
-            SecretKey=dify_config.TENCENT_COS_SECRET_KEY,
-            Scheme=dify_config.TENCENT_COS_SCHEME,
-        )
+        if dify_config.TENCENT_COS_CUSTOM_DOMAIN:
+            config = CosConfig(
+                Domain=dify_config.TENCENT_COS_CUSTOM_DOMAIN,
+                SecretId=dify_config.TENCENT_COS_SECRET_ID,
+                SecretKey=dify_config.TENCENT_COS_SECRET_KEY,
+                Scheme=dify_config.TENCENT_COS_SCHEME,
+            )
+        else:
+            config = CosConfig(
+                Region=dify_config.TENCENT_COS_REGION,
+                SecretId=dify_config.TENCENT_COS_SECRET_ID,
+                SecretKey=dify_config.TENCENT_COS_SECRET_KEY,
+                Scheme=dify_config.TENCENT_COS_SCHEME,
+            )
         self.client = CosS3Client(config)
 
     def save(self, filename, data):
         self.client.put_object(Bucket=self.bucket_name, Body=data, Key=filename)
 
     def load_once(self, filename: str) -> bytes:
-        data = self.client.get_object(Bucket=self.bucket_name, Key=filename)["Body"].get_raw_stream().read()
+        data: bytes = self.client.get_object(Bucket=self.bucket_name, Key=filename)["Body"].get_raw_stream().read()
         return data
 
     def load_stream(self, filename: str) -> Generator:
@@ -39,5 +47,5 @@ class TencentCosStorage(BaseStorage):
     def exists(self, filename):
         return self.client.object_exists(Bucket=self.bucket_name, Key=filename)
 
-    def delete(self, filename):
+    def delete(self, filename: str):
         self.client.delete_object(Bucket=self.bucket_name, Key=filename)

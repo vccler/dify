@@ -1,21 +1,26 @@
 'use client'
 import type { FC } from 'react'
-import React from 'react'
-import { useTranslation } from 'react-i18next'
+import { cn } from '@langgenius/dify-ui/cn'
 import {
-  RiErrorWarningFill,
-  RiLoader2Line,
-} from '@remixicon/react'
-import cn from '@/utils/classnames'
-import { FilePlus02 } from '@/app/components/base/icons/src/vender/line/files'
-import { CheckCircle } from '@/app/components/base/icons/src/vender/solid/general'
-import Popover from '@/app/components/base/popover'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@langgenius/dify-ui/dropdown-menu'
+import { useBoolean } from 'ahooks'
+import * as React from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import PlanUpgradeModal from '@/app/components/billing/plan-upgrade-modal'
+import { Plan } from '@/app/components/billing/type'
+import { useProviderContext } from '@/context/provider-context'
 
-export type ISegmentAddProps = {
+type ISegmentAddProps = {
   importStatus: ProcessStatus | string | undefined
   clearProcessStatus: () => void
   showNewSegmentModal: () => void
   showBatchModal: () => void
+  embedding: boolean
 }
 
 export enum ProcessStatus {
@@ -30,32 +35,69 @@ const SegmentAdd: FC<ISegmentAddProps> = ({
   clearProcessStatus,
   showNewSegmentModal,
   showBatchModal,
+  embedding,
 }) => {
   const { t } = useTranslation()
+  const [isShowPlanUpgradeModal, {
+    setTrue: showPlanUpgradeModal,
+    setFalse: hidePlanUpgradeModal,
+  }] = useBoolean(false)
+  const { plan, enableBilling } = useProviderContext()
+  const { type } = plan
+  const canAdd = enableBilling ? type !== Plan.sandbox : true
+  const [isBatchMenuOpen, setIsBatchMenuOpen] = useState(false)
+  const batchMenuAnchorRef = useRef<HTMLDivElement>(null)
+
+  const withNeedUpgradeCheck = useCallback((fn: () => void) => {
+    return () => {
+      if (!canAdd) {
+        showPlanUpgradeModal()
+        return
+      }
+      fn()
+    }
+  }, [canAdd, showPlanUpgradeModal])
+  const textColor = useMemo(() => {
+    return embedding
+      ? 'text-components-button-secondary-accent-text-disabled'
+      : 'text-components-button-secondary-accent-text'
+  }, [embedding])
 
   if (importStatus) {
     return (
       <>
         {(importStatus === ProcessStatus.WAITING || importStatus === ProcessStatus.PROCESSING) && (
-          <div className='relative overflow-hidden inline-flex items-center mr-2 px-3 py-[6px] text-blue-700 bg-[#F5F8FF] rounded-lg border border-black/5'>
-            {importStatus === ProcessStatus.WAITING && <div className='absolute left-0 top-0 w-3/12 h-full bg-[#D1E0FF] z-0' />}
-            {importStatus === ProcessStatus.PROCESSING && <div className='absolute left-0 top-0 w-2/3 h-full bg-[#D1E0FF] z-0' />}
-            <RiLoader2Line className='animate-spin mr-2 w-4 h-4' />
-            <span className='font-medium text-[13px] leading-[18px] z-10'>{t('datasetDocuments.list.batchModal.processing')}</span>
+          <div className="relative mr-2 inline-flex items-center overflow-hidden rounded-lg border-[0.5px] border-components-progress-bar-border
+            bg-components-progress-bar-border px-2.5 py-2 text-components-button-secondary-accent-text
+            shadow-xs shadow-shadow-shadow-3 backdrop-blur-[5px]"
+          >
+            <div className={cn('absolute top-0 left-0 z-0 h-full border-r-[1.5px] border-r-components-progress-bar-progress-highlight bg-components-progress-bar-progress', importStatus === ProcessStatus.WAITING ? 'w-3/12' : 'w-2/3')} />
+            <span aria-hidden className="mr-1 i-ri-loader-2-line h-4 w-4 animate-spin" />
+            <span className="z-10 pr-0.5 system-sm-medium">{t('list.batchModal.processing', { ns: 'datasetDocuments' })}</span>
           </div>
         )}
         {importStatus === ProcessStatus.COMPLETED && (
-          <div className='inline-flex items-center mr-2 px-3 py-[6px] text-gray-700 bg-[#F6FEF9] rounded-lg border border-black/5'>
-            <CheckCircle className='mr-2 w-4 h-4 text-[#039855]' />
-            <span className='font-medium text-[13px] leading-[18px]'>{t('datasetDocuments.list.batchModal.completed')}</span>
-            <span className='pl-2 font-medium text-[13px] leading-[18px] text-[#155EEF] cursor-pointer' onClick={clearProcessStatus}>{t('datasetDocuments.list.batchModal.ok')}</span>
+          <div className="relative mr-2 inline-flex items-center overflow-hidden rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg shadow-xs shadow-shadow-shadow-3 backdrop-blur-[5px]">
+            <div className="inline-flex items-center border-r border-r-divider-subtle px-2.5 py-2 text-text-success">
+              <span aria-hidden className="mr-1 i-custom-vender-solid-general-check-circle h-4 w-4" />
+              <span className="pr-0.5 system-sm-medium">{t('list.batchModal.completed', { ns: 'datasetDocuments' })}</span>
+            </div>
+            <div className="m-1 inline-flex items-center">
+              <span className="cursor-pointer rounded-md px-1.5 py-1 system-xs-medium text-components-button-ghost-text hover:bg-components-button-ghost-bg-hover" onClick={clearProcessStatus}>{t('list.batchModal.ok', { ns: 'datasetDocuments' })}</span>
+            </div>
+            <div className="absolute top-0 left-0 -z-10 h-full w-full bg-dataset-chunk-process-success-bg opacity-40" />
           </div>
         )}
         {importStatus === ProcessStatus.ERROR && (
-          <div className='inline-flex items-center mr-2 px-3 py-[6px] text-red-600 bg-red-100 rounded-lg border border-black/5'>
-            <RiErrorWarningFill className='mr-2 w-4 h-4 text-[#D92D20]' />
-            <span className='font-medium text-[13px] leading-[18px]'>{t('datasetDocuments.list.batchModal.error')}</span>
-            <span className='pl-2 font-medium text-[13px] leading-[18px] text-[#155EEF] cursor-pointer' onClick={clearProcessStatus}>{t('datasetDocuments.list.batchModal.ok')}</span>
+          <div className="relative mr-2 inline-flex items-center overflow-hidden rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg shadow-xs shadow-shadow-shadow-3 backdrop-blur-[5px]">
+            <div className="inline-flex items-center border-r border-r-divider-subtle px-2.5 py-2 text-text-destructive">
+              <span aria-hidden className="mr-1 i-ri-error-warning-fill h-4 w-4" />
+              <span className="pr-0.5 system-sm-medium">{t('list.batchModal.error', { ns: 'datasetDocuments' })}</span>
+            </div>
+            <div className="m-1 inline-flex items-center">
+              <span className="cursor-pointer rounded-md px-1.5 py-1 system-xs-medium text-components-button-ghost-text hover:bg-components-button-ghost-bg-hover" onClick={clearProcessStatus}>{t('list.batchModal.ok', { ns: 'datasetDocuments' })}</span>
+            </div>
+            <div className="absolute top-0 left-0 -z-10 h-full w-full bg-dataset-chunk-process-error-bg opacity-40" />
           </div>
         )}
       </>
@@ -63,24 +105,68 @@ const SegmentAdd: FC<ISegmentAddProps> = ({
   }
 
   return (
-    <Popover
-      manualClose
-      trigger='click'
-      htmlContent={
-        <div className='w-full py-1'>
-          <div className='py-2 px-3 mx-1 flex items-center gap-2 hover:bg-gray-100 rounded-lg cursor-pointer text-gray-700 text-sm' onClick={showNewSegmentModal}>{t('datasetDocuments.list.action.add')}</div>
-          <div className='py-2 px-3 mx-1 flex items-center gap-2 hover:bg-gray-100 rounded-lg cursor-pointer text-gray-700 text-sm' onClick={showBatchModal}>{t('datasetDocuments.list.action.batchAdd')}</div>
-        </div>
-      }
-      btnElement={
-        <div className='inline-flex items-center'>
-          <FilePlus02 className='w-4 h-4 text-gray-700' />
-          <span className='pl-1'>{t('datasetDocuments.list.action.addButton')}</span>
-        </div>
-      }
-      btnClassName={open => cn('mr-2 !py-[6px] !text-[13px] !leading-[18px] hover:bg-gray-50 border border-gray-200 hover:border-gray-300 hover:shadow-[0_1px_2px_rgba(16,24,40,0.05)]', open ? '!bg-gray-100 !shadow-none' : '!bg-transparent')}
-      className='!w-[132px] h-fit !z-20  !translate-x-0 !left-0'
-    />
+    <div
+      ref={batchMenuAnchorRef}
+      className={cn(
+        'relative z-20 flex items-center rounded-lg border-[0.5px] border-components-button-secondary-border bg-components-button-secondary-bg shadow-xs shadow-shadow-shadow-3 backdrop-blur-[5px]',
+        embedding && 'border-components-button-secondary-border-disabled bg-components-button-secondary-bg-disabled',
+      )}
+    >
+      <button
+        type="button"
+        className={`inline-flex items-center rounded-l-lg border-r border-r-divider-subtle px-2.5 py-2
+          hover:bg-state-base-hover disabled:cursor-not-allowed disabled:hover:bg-transparent`}
+        onClick={withNeedUpgradeCheck(showNewSegmentModal)}
+        disabled={embedding}
+      >
+        <span aria-hidden className={cn('i-ri-add-line h-4 w-4', textColor)} />
+        <span className={cn('ml-0.5 px-0.5 text-[13px] leading-[16px] font-medium capitalize', textColor)}>
+          {t('list.action.addButton', { ns: 'datasetDocuments' })}
+        </span>
+      </button>
+      <DropdownMenu open={isBatchMenuOpen} onOpenChange={setIsBatchMenuOpen}>
+        <DropdownMenuTrigger
+          aria-label={t('list.action.batchAdd', { ns: 'datasetDocuments' })}
+          disabled={embedding}
+          className={cn(
+            `rounded-l-none rounded-r-lg border-0 p-2 backdrop-blur-[5px]
+            hover:bg-state-base-hover disabled:cursor-not-allowed disabled:bg-transparent disabled:hover:bg-transparent`,
+            isBatchMenuOpen && 'bg-state-base-hover',
+          )}
+        >
+          <div className="flex items-center justify-center">
+            <span aria-hidden className={cn('i-ri-arrow-down-s-line h-4 w-4', textColor)} />
+          </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          placement="bottom-start"
+          sideOffset={4}
+          positionerProps={{ anchor: batchMenuAnchorRef }}
+          popupClassName="w-[var(--anchor-width)] rounded-xl border-[0.5px] border-components-panel-border bg-components-panel-bg-blur py-0 shadow-xl shadow-shadow-shadow-5 backdrop-blur-[5px]"
+        >
+          <div className="w-full p-1">
+            <DropdownMenuItem
+              className="h-auto w-full px-2 py-1.5 system-md-regular"
+              onClick={() => {
+                setIsBatchMenuOpen(false)
+                withNeedUpgradeCheck(showBatchModal)()
+              }}
+            >
+              {t('list.action.batchAdd', { ns: 'datasetDocuments' })}
+            </DropdownMenuItem>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {isShowPlanUpgradeModal && (
+        <PlanUpgradeModal
+          show
+          onClose={hidePlanUpgradeModal}
+          title={t('upgrade.addChunks.title', { ns: 'billing' })!}
+          description={t('upgrade.addChunks.description', { ns: 'billing' })!}
+        />
+      )}
+    </div>
+
   )
 }
 export default React.memo(SegmentAdd)

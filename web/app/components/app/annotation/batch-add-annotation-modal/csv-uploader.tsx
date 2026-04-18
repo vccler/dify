@@ -1,13 +1,13 @@
 'use client'
 import type { FC } from 'react'
-import React, { useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useContext } from 'use-context-selector'
+import { Button } from '@langgenius/dify-ui/button'
+import { cn } from '@langgenius/dify-ui/cn'
+import { toast } from '@langgenius/dify-ui/toast'
 import { RiDeleteBinLine } from '@remixicon/react'
-import cn from '@/utils/classnames'
+import * as React from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Csv as CSVIcon } from '@/app/components/base/icons/src/public/files'
-import { ToastContext } from '@/app/components/base/toast'
-import Button from '@/app/components/base/button'
 
 export type Props = {
   file: File | undefined
@@ -19,7 +19,6 @@ const CSVUploader: FC<Props> = ({
   updateFile,
 }) => {
   const { t } = useTranslation()
-  const { notify } = useContext(ToastContext)
   const [dragging, setDragging] = useState(false)
   const dropRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<HTMLDivElement>(null)
@@ -28,7 +27,8 @@ const CSVUploader: FC<Props> = ({
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    e.target !== dragRef.current && setDragging(true)
+    if (e.target !== dragRef.current)
+      setDragging(true)
   }
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault()
@@ -37,7 +37,8 @@ const CSVUploader: FC<Props> = ({
   const handleDragLeave = (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    e.target === dragRef.current && setDragging(false)
+    if (e.target === dragRef.current)
+      setDragging(false)
   }
   const handleDrop = (e: DragEvent) => {
     e.preventDefault()
@@ -45,9 +46,9 @@ const CSVUploader: FC<Props> = ({
     setDragging(false)
     if (!e.dataTransfer)
       return
-    const files = [...e.dataTransfer.files]
+    const files = Array.from(e.dataTransfer.files)
     if (files.length > 1) {
-      notify({ type: 'error', message: t('datasetCreation.stepOne.uploader.validation.count') })
+      toast.error(t('stepOne.uploader.validation.count', { ns: 'datasetCreation' }))
       return
     }
     updateFile(files[0])
@@ -80,40 +81,40 @@ const CSVUploader: FC<Props> = ({
   }, [])
 
   return (
-    <div className='mt-6'>
+    <div className="mt-6">
       <input
         ref={fileUploader}
         style={{ display: 'none' }}
         type="file"
         id="fileUploader"
-        accept='.csv'
+        accept=".csv"
         onChange={fileChangeHandle}
       />
       <div ref={dropRef}>
         {!file && (
-          <div className={cn('flex items-center h-20 rounded-xl bg-gray-50 border border-dashed border-gray-200 text-sm font-normal', dragging && 'bg-[#F5F8FF] border border-[#B2CCFF]')}>
-            <div className='w-full flex items-center justify-center space-x-2'>
+          <div className={cn('flex h-20 items-center rounded-xl border border-dashed border-components-dropzone-border bg-components-dropzone-bg system-sm-regular', dragging && 'border border-components-dropzone-border-accent bg-components-dropzone-bg-accent')}>
+            <div className="flex w-full items-center justify-center space-x-2">
               <CSVIcon className="shrink-0" />
-              <div className='text-gray-500'>
-                {t('appAnnotation.batchModal.csvUploadTitle')}
-                <span className='text-primary-400 cursor-pointer' onClick={selectHandle}>{t('appAnnotation.batchModal.browse')}</span>
+              <div className="text-text-tertiary">
+                {t('batchModal.csvUploadTitle', { ns: 'appAnnotation' })}
+                <span className="cursor-pointer text-text-accent" onClick={selectHandle}>{t('batchModal.browse', { ns: 'appAnnotation' })}</span>
               </div>
             </div>
-            {dragging && <div ref={dragRef} className='absolute w-full h-full top-0 left-0' />}
+            {dragging && <div ref={dragRef} className="absolute top-0 left-0 h-full w-full" />}
           </div>
         )}
         {file && (
-          <div className={cn('flex items-center h-20 px-6 rounded-xl bg-gray-50 border border-gray-200 text-sm font-normal group', 'hover:bg-[#F5F8FF] hover:border-[#B2CCFF]')}>
+          <div className={cn('group flex h-20 items-center rounded-xl border border-components-panel-border bg-components-panel-bg px-6 text-sm font-normal', 'hover:border-components-panel-bg-blur hover:bg-components-panel-bg-blur')}>
             <CSVIcon className="shrink-0" />
-            <div className='flex ml-2 w-0 grow'>
-              <span className='max-w-[calc(100%_-_30px)] text-ellipsis whitespace-nowrap overflow-hidden text-gray-800'>{file.name.replace(/.csv$/, '')}</span>
-              <span className='shrink-0 text-gray-500'>.csv</span>
+            <div className="ml-2 flex w-0 grow">
+              <span className="max-w-[calc(100%-30px)] overflow-hidden text-ellipsis whitespace-nowrap text-text-primary">{file.name.replace(/.csv$/, '')}</span>
+              <span className="shrink-0 text-text-tertiary">.csv</span>
             </div>
-            <div className='hidden group-hover:flex items-center'>
-              <Button className='!h-8 !px-3 !py-[6px] bg-white !text-[13px] !leading-[18px] text-gray-700' onClick={selectHandle}>{t('datasetCreation.stepOne.uploader.change')}</Button>
-              <div className='mx-2 w-px h-4 bg-gray-200' />
-              <div className='p-2 cursor-pointer' onClick={removeFile}>
-                <RiDeleteBinLine className='w-4 h-4 text-gray-500' />
+            <div className="hidden items-center group-hover:flex">
+              <Button variant="secondary" onClick={selectHandle}>{t('stepOne.uploader.change', { ns: 'datasetCreation' })}</Button>
+              <div className="mx-2 h-4 w-px bg-divider-regular" />
+              <div className="cursor-pointer p-2" onClick={removeFile} data-testid="remove-file-button">
+                <RiDeleteBinLine className="h-4 w-4 text-text-tertiary" />
               </div>
             </div>
           </div>

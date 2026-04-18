@@ -1,18 +1,18 @@
-import { useState } from 'react'
+import type { FileEntity } from '../types'
+import { Button } from '@langgenius/dify-ui/button'
 import {
   RiCloseLine,
   RiDownloadLine,
 } from '@remixicon/react'
-import FileImageRender from '../file-image-render'
-import type { FileEntity } from '../types'
-import {
-  downloadFile,
-  fileIsUploaded,
-} from '../utils'
-import Button from '@/app/components/base/button'
-import ProgressCircle from '@/app/components/base/progress-bar/progress-circle'
+import { useState } from 'react'
 import { ReplayLine } from '@/app/components/base/icons/src/vender/other'
 import ImagePreview from '@/app/components/base/image-uploader/image-preview'
+import ProgressCircle from '@/app/components/base/progress-bar/progress-circle'
+import { downloadUrl } from '@/utils/download'
+import FileImageRender from '../file-image-render'
+import {
+  fileIsUploaded,
+} from '../utils'
 
 type FileImageItemProps = {
   file: FileEntity
@@ -32,46 +32,47 @@ const FileImageItem = ({
 }: FileImageItemProps) => {
   const { id, progress, base64Url, url, name } = file
   const [imagePreviewUrl, setImagePreviewUrl] = useState('')
+  const download_url = url ? `${url}&as_attachment=true` : base64Url
 
   return (
     <>
       <div
-        className='group/file-image relative cursor-pointer'
-        onClick={() => canPreview && setImagePreviewUrl(url || '')}
+        className="group/file-image relative cursor-pointer"
+        onClick={() => canPreview && setImagePreviewUrl(base64Url || url || '')}
       >
         {
           showDeleteAction && (
             <Button
-              className='hidden group-hover/file-image:flex absolute -right-1.5 -top-1.5 p-0 w-5 h-5 rounded-full z-[11]'
+              className="absolute -top-1.5 -right-1.5 z-11 hidden h-5 w-5 rounded-full p-0 group-hover/file-image:flex"
               onClick={() => onRemove?.(id)}
             >
-              <RiCloseLine className='w-4 h-4 text-components-button-secondary-text' />
+              <RiCloseLine className="h-4 w-4 text-components-button-secondary-text" />
             </Button>
           )
         }
         <FileImageRender
-          className='w-[68px] h-[68px] shadow-md'
+          className="h-[68px] w-[68px] shadow-md"
           imageUrl={base64Url || url || ''}
           showDownloadAction={showDownloadAction}
         />
         {
           progress >= 0 && !fileIsUploaded(file) && (
-            <div className='absolute inset-0 flex items-center justify-center border-[2px] border-effects-image-frame bg-background-overlay-alt z-10'>
+            <div className="absolute inset-0 z-10 flex items-center justify-center border-2 border-effects-image-frame bg-background-overlay-alt">
               <ProgressCircle
                 percentage={progress}
                 size={12}
-                circleStrokeColor='stroke-components-progress-white-border'
-                circleFillColor='fill-transparent'
-                sectorFillColor='fill-components-progress-white-progress'
+                circleStrokeColor="stroke-components-progress-white-border"
+                circleFillColor="fill-transparent"
+                sectorFillColor="fill-components-progress-white-progress"
               />
             </div>
           )
         }
         {
           progress === -1 && (
-            <div className='absolute inset-0 flex items-center justify-center border-[2px] border-state-destructive-border bg-background-overlay-destructive z-10'>
+            <div className="absolute inset-0 z-10 flex items-center justify-center border-2 border-state-destructive-border bg-background-overlay-destructive">
               <ReplayLine
-                className='w-5 h-5'
+                className="h-5 w-5"
                 onClick={() => onReUpload?.(id)}
               />
             </div>
@@ -79,15 +80,15 @@ const FileImageItem = ({
         }
         {
           showDownloadAction && (
-            <div className='hidden group-hover/file-image:block absolute inset-0.5 bg-background-overlay-alt bg-opacity-[0.3] z-10'>
+            <div className="bg-opacity-[0.3] absolute inset-0.5 z-10 hidden bg-background-overlay-alt group-hover/file-image:block">
               <div
-                className='absolute bottom-0.5 right-0.5  flex items-center justify-center w-6 h-6 rounded-lg bg-components-actionbar-bg shadow-md'
+                className="absolute right-0.5 bottom-0.5 flex h-6 w-6 items-center justify-center rounded-lg bg-components-actionbar-bg shadow-md"
                 onClick={(e) => {
                   e.stopPropagation()
-                  downloadFile(url || base64Url || '', name)
+                  downloadUrl({ url: download_url || '', fileName: name, target: '_blank' })
                 }}
               >
-                <RiDownloadLine className='w-4 h-4 text-text-tertiary' />
+                <RiDownloadLine className="h-4 w-4 text-text-tertiary" />
               </div>
             </div>
           )

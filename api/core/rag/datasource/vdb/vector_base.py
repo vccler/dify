@@ -1,9 +1,18 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, TypedDict
 
 from core.rag.models.document import Document
+
+
+class VectorStoreDict(TypedDict):
+    class_prefix: str
+
+
+class VectorIndexStructDict(TypedDict):
+    type: str
+    vector_store: VectorStoreDict
 
 
 class BaseVector(ABC):
@@ -15,11 +24,11 @@ class BaseVector(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def create(self, texts: list[Document], embeddings: list[list[float]], **kwargs):
+    def create(self, texts: list[Document], embeddings: list[list[float]], **kwargs) -> list[str] | None:
         raise NotImplementedError
 
     @abstractmethod
-    def add_texts(self, documents: list[Document], embeddings: list[list[float]], **kwargs):
+    def add_texts(self, documents: list[Document], embeddings: list[list[float]], **kwargs) -> list[str]:
         raise NotImplementedError
 
     @abstractmethod
@@ -51,15 +60,16 @@ class BaseVector(ABC):
 
     def _filter_duplicate_texts(self, texts: list[Document]) -> list[Document]:
         for text in texts.copy():
-            doc_id = text.metadata["doc_id"]
-            exists_duplicate_node = self.text_exists(doc_id)
-            if exists_duplicate_node:
-                texts.remove(text)
+            if text.metadata and "doc_id" in text.metadata:
+                doc_id = text.metadata["doc_id"]
+                exists_duplicate_node = self.text_exists(doc_id)
+                if exists_duplicate_node:
+                    texts.remove(text)
 
         return texts
 
     def _get_uuids(self, texts: list[Document]) -> list[str]:
-        return [text.metadata["doc_id"] for text in texts]
+        return [text.metadata["doc_id"] for text in texts if text.metadata and "doc_id" in text.metadata]
 
     @property
     def collection_name(self):

@@ -1,9 +1,11 @@
 from typing import cast
 
-from core.workflow.nodes import NodeType
+from sqlalchemy import delete, select
+
 from core.workflow.nodes.knowledge_retrieval.entities import KnowledgeRetrievalNodeData
 from events.app_event import app_published_workflow_was_updated
 from extensions.ext_database import db
+from graphon.nodes import BuiltinNodeTypes
 from models.dataset import AppDatasetJoin
 from models.workflow import Workflow
 
@@ -15,13 +17,13 @@ def handle(sender, **kwargs):
     published_workflow = cast(Workflow, published_workflow)
 
     dataset_ids = get_dataset_ids_from_workflow(published_workflow)
-    app_dataset_joins = db.session.query(AppDatasetJoin).filter(AppDatasetJoin.app_id == app.id).all()
+    app_dataset_joins = db.session.scalars(select(AppDatasetJoin).where(AppDatasetJoin.app_id == app.id)).all()
 
-    removed_dataset_ids = []
+    removed_dataset_ids: set[str] = set()
     if not app_dataset_joins:
         added_dataset_ids = dataset_ids
     else:
-        old_dataset_ids = set()
+        old_dataset_ids: set[str] = set()
         old_dataset_ids.update(app_dataset_join.dataset_id for app_dataset_join in app_dataset_joins)
 
         added_dataset_ids = dataset_ids - old_dataset_ids
@@ -29,9 +31,9 @@ def handle(sender, **kwargs):
 
     if removed_dataset_ids:
         for dataset_id in removed_dataset_ids:
-            db.session.query(AppDatasetJoin).filter(
-                AppDatasetJoin.app_id == app.id, AppDatasetJoin.dataset_id == dataset_id
-            ).delete()
+            db.session.execute(
+                delete(AppDatasetJoin).where(AppDatasetJoin.app_id == app.id, AppDatasetJoin.dataset_id == dataset_id)
+            )
 
     if added_dataset_ids:
         for dataset_id in added_dataset_ids:
@@ -41,8 +43,8 @@ def handle(sender, **kwargs):
     db.session.commit()
 
 
-def get_dataset_ids_from_workflow(published_workflow: Workflow) -> set:
-    dataset_ids = set()
+def get_dataset_ids_from_workflow(published_workflow: Workflow) -> set[str]:
+    dataset_ids: set[str] = set()
     graph = published_workflow.graph_dict
     if not graph:
         return dataset_ids
@@ -51,7 +53,7 @@ def get_dataset_ids_from_workflow(published_workflow: Workflow) -> set:
 
     # fetch all knowledge retrieval nodes
     knowledge_retrieval_nodes = [
-        node for node in nodes if node.get("data", {}).get("type") == NodeType.KNOWLEDGE_RETRIEVAL.value
+        node for node in nodes if node.get("data", {}).get("type") == BuiltinNodeTypes.KNOWLEDGE_RETRIEVAL
     ]
 
     if not knowledge_retrieval_nodes:
@@ -59,9 +61,9 @@ def get_dataset_ids_from_workflow(published_workflow: Workflow) -> set:
 
     for node in knowledge_retrieval_nodes:
         try:
-            node_data = KnowledgeRetrievalNodeData(**node.get("data", {}))
-            dataset_ids.update(node_data.dataset_ids)
-        except Exception as e:
+            node_data = KnowledgeRetrievalNodeData.model_validate(node.get("data", {}))
+            dataset_ids.update(dataset_id for dataset_id in node_data.dataset_ids)
+        except Exception:
             continue
 
     return dataset_ids

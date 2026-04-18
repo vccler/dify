@@ -1,13 +1,11 @@
 'use client'
 import type { FC } from 'react'
-import React from 'react'
-import { useTranslation } from 'react-i18next'
 import type { RetrievalConfig } from '@/types/app'
-import { RETRIEVE_METHOD } from '@/types/app'
+import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import RadioCard from '@/app/components/base/radio-card'
-import { HighPriority } from '@/app/components/base/icons/src/vender/solid/arrows'
-import { PatternRecognition, Semantic } from '@/app/components/base/icons/src/vender/solid/development'
-import { FileSearch02 } from '@/app/components/base/icons/src/vender/solid/files'
+import { RETRIEVE_METHOD } from '@/types/app'
+import { retrievalIcon } from '../../create/icons'
 
 type Props = {
   value: RetrievalConfig
@@ -15,11 +13,12 @@ type Props = {
 
 export const getIcon = (type: RETRIEVE_METHOD) => {
   return ({
-    [RETRIEVE_METHOD.semantic]: Semantic,
-    [RETRIEVE_METHOD.fullText]: FileSearch02,
-    [RETRIEVE_METHOD.hybrid]: PatternRecognition,
-    [RETRIEVE_METHOD.invertedIndex]: HighPriority,
-  })[type] || FileSearch02
+    [RETRIEVE_METHOD.semantic]: retrievalIcon.vector,
+    [RETRIEVE_METHOD.fullText]: retrievalIcon.fullText,
+    [RETRIEVE_METHOD.hybrid]: retrievalIcon.hybrid,
+    [RETRIEVE_METHOD.invertedIndex]: retrievalIcon.vector,
+    [RETRIEVE_METHOD.keywordSearch]: retrievalIcon.vector,
+  })[type] || retrievalIcon.vector
 }
 
 const EconomicalRetrievalMethodConfig: FC<Props> = ({
@@ -28,35 +27,35 @@ const EconomicalRetrievalMethodConfig: FC<Props> = ({
 }) => {
   const { t } = useTranslation()
   const type = value.search_method
-  const Icon = getIcon(type)
+  const icon = <img className="size-3.5 text-util-colors-purple-purple-600" src={getIcon(type)} alt="" />
   return (
-    <div className='space-y-2'>
+    <div className="space-y-2">
       <RadioCard
-        icon={<Icon className='w-4 h-4 text-[#7839EE]' />}
-        title={t(`dataset.retrieval.${type}.title`)}
-        description={t(`dataset.retrieval.${type}.description`)}
+        icon={icon}
+        title={t(`retrieval.${type}.title`, { ns: 'dataset' })}
+        description={t(`retrieval.${type}.description`, { ns: 'dataset' })}
         noRadio
-        chosenConfigWrapClassName='!pb-3'
-        chosenConfig={
-          <div className='flex flex-wrap leading-[18px] text-xs font-normal'>
+        chosenConfigWrapClassName="pb-3!"
+        chosenConfig={(
+          <div className="flex flex-wrap text-xs leading-[18px] font-normal">
             {value.reranking_model.reranking_model_name && (
-              <div className='mr-8 flex space-x-1'>
-                <div className='text-gray-500'>{t('common.modelProvider.rerankModel.key')}</div>
-                <div className='font-medium text-gray-800'>{value.reranking_model.reranking_model_name}</div>
+              <div className="mr-8 flex space-x-1">
+                <div className="text-gray-500">{t('modelProvider.rerankModel.key', { ns: 'common' })}</div>
+                <div className="font-medium text-gray-800">{value.reranking_model.reranking_model_name}</div>
               </div>
             )}
 
-            <div className='mr-8 flex space-x-1'>
-              <div className='text-gray-500'>{t('appDebug.datasetConfig.top_k')}</div>
-              <div className='font-medium text-gray-800'>{value.top_k}</div>
+            <div className="mr-8 flex space-x-1">
+              <div className="text-gray-500">{t('datasetConfig.top_k', { ns: 'appDebug' })}</div>
+              <div className="font-medium text-gray-800">{value.top_k}</div>
             </div>
 
-            <div className='mr-8 flex space-x-1'>
-              <div className='text-gray-500'>{t('appDebug.datasetConfig.score_threshold')}</div>
-              <div className='font-medium text-gray-800'>{value.score_threshold}</div>
+            <div className="mr-8 flex space-x-1">
+              <div className="text-gray-500">{t('datasetConfig.score_threshold', { ns: 'appDebug' })}</div>
+              <div className="font-medium text-gray-800">{value.score_threshold}</div>
             </div>
           </div>
-        }
+        )}
       />
     </div>
   )

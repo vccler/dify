@@ -1,13 +1,14 @@
 'use client'
 import type { FC } from 'react'
-import React, { useCallback, useState } from 'react'
+import { Button } from '@langgenius/dify-ui/button'
+import { cn } from '@langgenius/dify-ui/cn'
+import { noop } from 'es-toolkit/function'
+import * as React from 'react'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import s from './style.module.css'
-import EmojiPickerInner from './Inner'
-import cn from '@/utils/classnames'
 import Divider from '@/app/components/base/divider'
-import Button from '@/app/components/base/button'
 import Modal from '@/app/components/base/modal'
+import EmojiPickerInner from './Inner'
 
 type IEmojiPickerProps = {
   isModal?: boolean
@@ -32,34 +33,41 @@ const EmojiPicker: FC<IEmojiPickerProps> = ({
   }, [setSelectedEmoji, setSelectedBackground])
 
   return isModal
-    ? <Modal
-      onClose={() => { }}
-      isShow
-      closable={false}
-      wrapperClassName={className}
-      className={cn(s.container, '!w-[362px] !p-0')}
-    >
-      <EmojiPickerInner
-        className="pt-3"
-        onSelect={handleSelectEmoji} />
-      <Divider className='m-0' />
-      <div className='w-full flex items-center justify-center p-3 gap-2'>
-        <Button className='w-full' onClick={() => {
-          onClose && onClose()
-        }}>
-          {t('app.iconPicker.cancel')}
-        </Button>
-        <Button
-          disabled={selectedEmoji === '' || !selectedBackground}
-          variant="primary"
-          className='w-full'
-          onClick={() => {
-            onSelect && onSelect(selectedEmoji, selectedBackground!)
-          }}>
-          {t('app.iconPicker.ok')}
-        </Button>
-      </div>
-    </Modal>
+    ? (
+        <Modal
+          onClose={noop}
+          isShow
+          closable={false}
+          wrapperClassName={className}
+          className={cn('flex max-h-[552px] flex-col rounded-xl border-[0.5px] border-divider-subtle p-0 shadow-xl')}
+        >
+          <EmojiPickerInner
+            className="pt-3"
+            onSelect={handleSelectEmoji}
+          />
+          <Divider className="mt-3 mb-0" />
+          <div className="flex w-full items-center justify-center gap-2 p-3">
+            <Button
+              className="w-full"
+              onClick={() => {
+                onClose?.()
+              }}
+            >
+              {t('iconPicker.cancel', { ns: 'app' })}
+            </Button>
+            <Button
+              disabled={selectedEmoji === '' || !selectedBackground}
+              variant="primary"
+              className="w-full"
+              onClick={() => {
+                onSelect?.(selectedEmoji, selectedBackground!)
+              }}
+            >
+              {t('iconPicker.ok', { ns: 'app' })}
+            </Button>
+          </div>
+        </Modal>
+      )
     : <></>
 }
 export default EmojiPicker

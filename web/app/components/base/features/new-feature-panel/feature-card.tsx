@@ -1,8 +1,8 @@
-import React from 'react'
+import { Switch } from '@langgenius/dify-ui/switch'
 import {
   RiQuestionLine,
 } from '@remixicon/react'
-import Switch from '@/app/components/base/switch'
+import * as React from 'react'
 import Tooltip from '@/app/components/base/tooltip'
 
 type Props = {
@@ -32,26 +32,26 @@ const FeatureCard = ({
 }: Props) => {
   return (
     <div
-      className='mb-1 p-3 border-t-[0.5px] border-l-[0.5px] border-effects-highlight rounded-xl bg-background-section-burn'
+      className="mb-1 rounded-xl border-t-[0.5px] border-l-[0.5px] border-effects-highlight bg-background-section-burn p-3"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <div className='mb-2 flex items-center gap-2'>
+      <div className="mb-2 flex items-center gap-2">
         {icon}
-        <div className='grow flex items-center text-text-secondary system-sm-semibold'>
+        <div className="flex grow items-center system-sm-semibold text-text-secondary">
           {title}
           {tooltip && (
             <Tooltip
               popupContent={tooltip}
             >
-              <div className='ml-0.5 p-px'><RiQuestionLine className='w-3.5 h-3.5 text-text-quaternary' /></div>
+              <div className="ml-0.5 p-px"><RiQuestionLine className="h-3.5 w-3.5 text-text-quaternary" /></div>
             </Tooltip>
           )}
         </div>
-        <Switch disabled={disabled} className='shrink-0' onChange={state => onChange?.(state)} defaultValue={value} />
+        <Switch disabled={disabled} className="shrink-0" onCheckedChange={state => onChange?.(state)} checked={value} />
       </div>
       {description && (
-        <div className='min-h-8 text-text-tertiary system-xs-regular line-clamp-2'>{description}</div>
+        <div className="line-clamp-2 min-h-8 system-xs-regular text-text-tertiary">{description}</div>
       )}
       {children}
     </div>

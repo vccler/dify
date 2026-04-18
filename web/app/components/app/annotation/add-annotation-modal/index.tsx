@@ -1,14 +1,17 @@
 'use client'
 import type { FC } from 'react'
-import React, { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import type { AnnotationItemBasic } from '../type'
-import EditItem, { EditItemType } from './edit-item'
+import { Button } from '@langgenius/dify-ui/button'
+import { toast } from '@langgenius/dify-ui/toast'
+import * as React from 'react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import Checkbox from '@/app/components/base/checkbox'
 import Drawer from '@/app/components/base/drawer-plus'
-import Button from '@/app/components/base/button'
-import Toast from '@/app/components/base/toast'
-import { useProviderContext } from '@/context/provider-context'
 import AnnotationFull from '@/app/components/billing/annotation-full'
+import { useProviderContext } from '@/context/provider-context'
+import EditItem, { EditItemType } from './edit-item'
+
 type Props = {
   isShow: boolean
   onHide: () => void
@@ -30,10 +33,10 @@ const AddAnnotationModal: FC<Props> = ({
 
   const isValid = (payload: AnnotationItemBasic) => {
     if (!payload.question)
-      return t('appAnnotation.errorMessage.queryRequired')
+      return t('errorMessage.queryRequired', { ns: 'appAnnotation' })
 
     if (!payload.answer)
-      return t('appAnnotation.errorMessage.answerRequired')
+      return t('errorMessage.answerRequired', { ns: 'appAnnotation' })
 
     return true
   }
@@ -44,10 +47,7 @@ const AddAnnotationModal: FC<Props> = ({
       answer,
     }
     if (isValid(payload) !== true) {
-      Toast.notify({
-        type: 'error',
-        message: isValid(payload) as string,
-      })
+      toast.error(isValid(payload) as string)
       return
     }
 
@@ -55,7 +55,7 @@ const AddAnnotationModal: FC<Props> = ({
     try {
       await onAdd(payload)
     }
-    catch (e) {
+    catch {
     }
     setIsSaving(false)
 
@@ -72,10 +72,10 @@ const AddAnnotationModal: FC<Props> = ({
       <Drawer
         isShow={isShow}
         onHide={onHide}
-        maxWidthClassName='!max-w-[480px]'
-        title={t('appAnnotation.addModal.title') as string}
+        maxWidthClassName="max-w-[480px]!"
+        title={t('addModal.title', { ns: 'appAnnotation' }) as string}
         body={(
-          <div className='p-6 pb-4 space-y-6'>
+          <div className="space-y-6 p-6 pb-4">
             <EditItem
               type={EditItemType.Query}
               content={question}
@@ -92,20 +92,20 @@ const AddAnnotationModal: FC<Props> = ({
           (
             <div>
               {isAnnotationFull && (
-                <div className='mt-6 mb-4 px-6'>
+                <div className="mt-6 mb-4 px-6">
                   <AnnotationFull />
                 </div>
               )}
-              <div className='px-6 flex h-16 items-center justify-between border-t border-black/5 bg-gray-50 rounded-bl-xl rounded-br-xl leading-[18px] text-[13px] font-medium text-gray-500'>
+              <div className="flex h-16 items-center justify-between rounded-br-xl rounded-bl-xl border-t border-divider-subtle bg-background-section-burn px-4 system-sm-medium text-text-tertiary">
                 <div
-                  className='flex items-center space-x-2'
+                  className="flex items-center space-x-2"
                 >
-                  <input type="checkbox" checked={isCreateNext} onChange={() => setIsCreateNext(!isCreateNext)} className="w-4 h-4 rounded border-gray-300 text-blue-700 focus:ring-blue-700" />
-                  <div>{t('appAnnotation.addModal.createNext')}</div>
+                  <Checkbox id="create-next-checkbox" checked={isCreateNext} onCheck={() => setIsCreateNext(!isCreateNext)} />
+                  <div>{t('addModal.createNext', { ns: 'appAnnotation' })}</div>
                 </div>
-                <div className='mt-2 flex space-x-2'>
-                  <Button className='h-7 text-xs' onClick={onHide}>{t('common.operation.cancel')}</Button>
-                  <Button className='h-7 text-xs' variant='primary' onClick={handleSave} loading={isSaving} disabled={isAnnotationFull}>{t('common.operation.add')}</Button>
+                <div className="mt-2 flex space-x-2">
+                  <Button className="h-7 text-xs" onClick={onHide}>{t('operation.cancel', { ns: 'common' })}</Button>
+                  <Button className="h-7 text-xs" variant="primary" onClick={handleSave} loading={isSaving} disabled={isAnnotationFull}>{t('operation.add', { ns: 'common' })}</Button>
                 </div>
               </div>
             </div>

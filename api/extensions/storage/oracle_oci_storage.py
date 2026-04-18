@@ -27,9 +27,9 @@ class OracleOCIStorage(BaseStorage):
 
     def load_once(self, filename: str) -> bytes:
         try:
-            data = self.client.get_object(Bucket=self.bucket_name, Key=filename)["Body"].read()
+            data: bytes = self.client.get_object(Bucket=self.bucket_name, Key=filename)["Body"].read()
         except ClientError as ex:
-            if ex.response["Error"]["Code"] == "NoSuchKey":
+            if ex.response.get("Error", {}).get("Code") == "NoSuchKey":
                 raise FileNotFoundError("File not found")
             else:
                 raise
@@ -40,7 +40,7 @@ class OracleOCIStorage(BaseStorage):
             response = self.client.get_object(Bucket=self.bucket_name, Key=filename)
             yield from response["Body"].iter_chunks()
         except ClientError as ex:
-            if ex.response["Error"]["Code"] == "NoSuchKey":
+            if ex.response.get("Error", {}).get("Code") == "NoSuchKey":
                 raise FileNotFoundError("File not found")
             else:
                 raise
@@ -55,5 +55,5 @@ class OracleOCIStorage(BaseStorage):
         except:
             return False
 
-    def delete(self, filename):
+    def delete(self, filename: str):
         self.client.delete_object(Bucket=self.bucket_name, Key=filename)

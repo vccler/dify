@@ -1,6 +1,3 @@
-from typing import Optional
-
-
-class BaseServiceError(Exception):
-    def __init__(self, description: Optional[str] = None):
+class BaseServiceError(ValueError):
+    def __init__(self, description: str | None = None):
         self.description = description

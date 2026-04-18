@@ -1,31 +1,22 @@
-import { Fragment } from 'react'
-import { useContext } from 'use-context-selector'
+import type { Plan } from '@/app/components/billing/type'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectItemText,
+  SelectLabel,
+  SelectTrigger,
+} from '@langgenius/dify-ui/select'
+import { toast } from '@langgenius/dify-ui/toast'
 import { useTranslation } from 'react-i18next'
-import { Menu, Transition } from '@headlessui/react'
-import s from './index.module.css'
-import cn from '@/utils/classnames'
-import { switchWorkspace } from '@/service/common'
+import PlanBadge from '@/app/components/header/plan-badge'
 import { useWorkspacesContext } from '@/context/workspace-context'
-import { ChevronRight } from '@/app/components/base/icons/src/vender/line/arrows'
-import { Check } from '@/app/components/base/icons/src/vender/line/general'
-import { ToastContext } from '@/app/components/base/toast'
-
-const itemClassName = `
-  flex items-center px-3 py-2 h-10 cursor-pointer
-`
-const itemIconClassName = `
-  shrink-0 mr-2 flex items-center justify-center w-6 h-6 bg-[#EFF4FF] rounded-md text-xs font-medium text-primary-600
-`
-const itemNameClassName = `
-  grow mr-2 text-sm text-gray-700 text-left
-`
-const itemCheckClassName = `
-  shrink-0 w-4 h-4 text-primary-600
-`
+import { switchWorkspace } from '@/service/common'
+import { basePath } from '@/utils/var'
 
 const WorkplaceSelector = () => {
   const { t } = useTranslation()
-  const { notify } = useContext(ToastContext)
   const { workspaces } = useWorkspacesContext()
   const currentWorkspace = workspaces.find(v => v.current)
 
@@ -34,65 +25,55 @@ const WorkplaceSelector = () => {
       if (currentWorkspace?.id === tenant_id)
         return
       await switchWorkspace({ url: '/workspaces/switch', body: { tenant_id } })
-      notify({ type: 'success', message: t('common.actionMsg.modifiedSuccessfully') })
-      location.assign(`${location.origin}`)
+      toast.success(t('actionMsg.modifiedSuccessfully', { ns: 'common' }))
+      location.assign(`${location.origin}${basePath}`)
     }
-    catch (e) {
-      notify({ type: 'error', message: t('common.provider.saveFailed') })
+    catch {
+      toast.error(t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }))
     }
   }
 
   return (
-    <Menu as="div" className="relative w-full h-full">
-      {
-        ({ open }) => (
-          <>
-            <Menu.Button className={cn(
-              `
-                ${itemClassName} w-full
-                group hover:bg-gray-50 cursor-pointer ${open && 'bg-gray-50'} rounded-lg
-              `,
-            )}>
-              <div className={itemIconClassName}>{currentWorkspace?.name[0].toLocaleUpperCase()}</div>
-              <div className={`${itemNameClassName} truncate`}>{currentWorkspace?.name}</div>
-              <ChevronRight className='shrink-0 w-[14px] h-[14px] text-gray-500' />
-            </Menu.Button>
-            <Transition
-              as={Fragment}
-              enter="transition ease-out duration-100"
-              enterFrom="transform opacity-0 scale-95"
-              enterTo="transform opacity-100 scale-100"
-              leave="transition ease-in duration-75"
-              leaveFrom="transform opacity-100 scale-100"
-              leaveTo="transform opacity-0 scale-95"
-            >
-              <Menu.Items
-                className={cn(
-                  `
-                    absolute top-[1px] min-w-[200px] max-h-[70vh] overflow-y-scroll z-10 bg-white border-[0.5px] border-gray-200
-                    divide-y divide-gray-100 origin-top-right rounded-xl
-                  `,
-                  s.popup,
-                )}
-              >
-                <div className="px-1 py-1">
-                  {
-                    workspaces.map(workspace => (
-                      <div className={itemClassName} key={workspace.id} onClick={() => handleSwitchWorkspace(workspace.id)}>
-                        <div className={itemIconClassName}>{workspace.name[0].toLocaleUpperCase()}</div>
-                        <div className={itemNameClassName}>{workspace.name}</div>
-                        {workspace.current && <Check className={itemCheckClassName} />}
-                      </div>
-                    ))
-                  }
-                </div>
-              </Menu.Items>
-            </Transition>
-          </>
-        )
-      }
-    </Menu>
+    <Select
+      value={currentWorkspace?.id ?? ''}
+      onValueChange={(value) => {
+        if (value)
+          void handleSwitchWorkspace(value)
+      }}
+    >
+      <SelectTrigger
+        className="w-auto cursor-pointer rounded-[10px] border-0 bg-transparent p-0.5 hover:bg-state-base-hover data-popup-open:bg-state-base-hover"
+      >
+        <div className="flex items-center">
+          <div className="mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-components-icon-bg-blue-solid text-[13px] max-[800px]:mr-0">
+            <span className="h-6 bg-gradient-to-r from-components-avatar-shape-fill-stop-0 to-components-avatar-shape-fill-stop-100 bg-clip-text align-middle leading-6 font-semibold text-shadow-shadow-1 uppercase opacity-90">
+              {currentWorkspace?.name[0]?.toLocaleUpperCase()}
+            </span>
+          </div>
+          <div className="max-w-[149px] min-w-0 truncate system-sm-medium text-text-secondary max-[800px]:hidden">
+            {currentWorkspace?.name}
+          </div>
+        </div>
+      </SelectTrigger>
+      <SelectContent popupClassName="w-[280px]">
+        <SelectGroup>
+          <SelectLabel>
+            {t('userProfile.workspace', { ns: 'common' })}
+          </SelectLabel>
+          {workspaces.map(workspace => (
+            <SelectItem key={workspace.id} value={workspace.id} className="gap-2 py-1 pr-2 pl-3">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-components-icon-bg-blue-solid text-[13px]">
+                <span className="h-6 bg-gradient-to-r from-components-avatar-shape-fill-stop-0 to-components-avatar-shape-fill-stop-100 bg-clip-text align-middle leading-6 font-semibold text-shadow-shadow-1 uppercase opacity-90">
+                  {workspace.name[0]?.toLocaleUpperCase()}
+                </span>
+              </div>
+              <SelectItemText className="system-md-regular">{workspace.name}</SelectItemText>
+              <PlanBadge plan={workspace.plan as Plan} />
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   )
 }
-
 export default WorkplaceSelector

@@ -6,30 +6,39 @@ from extensions.storage.base_storage import BaseStorage
 
 
 def get_example_folder() -> str:
-    return "/dify"
+    return "~/dify"
 
 
 def get_example_bucket() -> str:
     return "dify"
 
 
+def get_opendal_bucket() -> str:
+    import os
+
+    return os.environ.get("OPENDAL_FS_ROOT", "/tmp/dify-storage")
+
+
 def get_example_filename() -> str:
     return "test.txt"
 
 
-def get_example_data() -> bytes:
-    return b"test"
+def get_example_data(length: int = 4) -> bytes:
+    chars = "test"
+    result = "".join(chars[i % len(chars)] for i in range(length)).encode()
+    assert len(result) == length
+    return result
 
 
 def get_example_filepath() -> str:
-    return "/test"
+    return "~/test"
 
 
 class BaseStorageTest:
     @pytest.fixture(autouse=True)
-    def setup_method(self):
+    def setup_method(self, *args, **kwargs):
         """Should be implemented in child classes to setup specific storage."""
-        self.storage = BaseStorage()
+        self.storage: BaseStorage
 
     def test_save(self):
         """Test saving data."""

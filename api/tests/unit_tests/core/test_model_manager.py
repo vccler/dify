@@ -2,11 +2,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import redis
+from pytest_mock import MockerFixture
 
 from core.entities.provider_entities import ModelLoadBalancingConfiguration
 from core.model_manager import LBModelManager
-from core.model_runtime.entities.model_entities import ModelType
 from extensions.ext_redis import redis_client
+from graphon.model_runtime.entities.model_entities import ModelType
 
 
 @pytest.fixture
@@ -39,7 +40,7 @@ def lb_model_manager():
     return lb_model_manager
 
 
-def test_lb_model_manager_fetch_next(mocker, lb_model_manager):
+def test_lb_model_manager_fetch_next(mocker: MockerFixture, lb_model_manager: LBModelManager):
     # initialize redis client
     redis_client.initialize(redis.Redis())
 

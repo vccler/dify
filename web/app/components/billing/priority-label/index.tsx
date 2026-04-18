@@ -1,17 +1,19 @@
+import { cn } from '@langgenius/dify-ui/cn'
+import { RiAedFill } from '@remixicon/react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import Tooltip from '@/app/components/base/tooltip'
+import { useProviderContext } from '@/context/provider-context'
 import {
   DocumentProcessingPriority,
   Plan,
 } from '../type'
-import { useProviderContext } from '@/context/provider-context'
-import {
-  ZapFast,
-  ZapNarrow,
-} from '@/app/components/base/icons/src/vender/solid/general'
-import Tooltip from '@/app/components/base/tooltip'
 
-const PriorityLabel = () => {
+type PriorityLabelProps = {
+  className?: string
+}
+
+const PriorityLabel = ({ className }: PriorityLabelProps) => {
   const { t } = useTranslation()
   const { plan } = useProviderContext()
 
@@ -24,35 +26,40 @@ const PriorityLabel = () => {
 
     if (plan.type === Plan.team || plan.type === Plan.enterprise)
       return DocumentProcessingPriority.topPriority
+
+    return DocumentProcessingPriority.standard
   }, [plan])
 
   return (
-    <Tooltip popupContent={
+    <Tooltip popupContent={(
       <div>
-        <div className='mb-1 text-xs font-semibold text-gray-700'>{`${t('billing.plansCommon.documentProcessingPriority')}: ${t(`billing.plansCommon.priority.${priority}`)}`}</div>
+        <div className="mb-1 text-xs font-semibold text-text-primary">
+          {t('plansCommon.documentProcessingPriority', { ns: 'billing' })}
+          :
+          {' '}
+          {t(`plansCommon.priority.${priority}`, { ns: 'billing' })}
+        </div>
         {
           priority !== DocumentProcessingPriority.topPriority && (
-            <div className='text-xs text-gray-500'>{t('billing.plansCommon.documentProcessingPriorityTip')}</div>
+            <div className="text-xs text-text-secondary">{t('plansCommon.documentProcessingPriorityTip', { ns: 'billing' })}</div>
           )
         }
       </div>
-    }>
-      <span className={`
-        flex items-center ml-1 px-[5px] h-[18px] rounded border border-[#C7D7FE]
-        text-[10px] font-medium text-[#3538CD]
-      `}>
+    )}
+    >
+      <div
+        className={cn(
+          'ml-1 inline-flex h-[18px] shrink-0 items-center rounded-[5px] border border-text-accent-secondary bg-components-badge-bg-dimm px-[5px] system-2xs-medium text-text-accent-secondary',
+          className,
+        )}
+      >
         {
-          plan.type === Plan.professional && (
-            <ZapNarrow className='mr-0.5 w-3 h-3' />
+          (plan.type === Plan.professional || plan.type === Plan.team || plan.type === Plan.enterprise) && (
+            <RiAedFill className="mr-0.5 size-3" />
           )
         }
-        {
-          (plan.type === Plan.team || plan.type === Plan.enterprise) && (
-            <ZapFast className='mr-0.5 w-3 h-3' />
-          )
-        }
-        {t(`billing.plansCommon.priority.${priority}`)}
-      </span>
+        <span>{t(`plansCommon.priority.${priority}`, { ns: 'billing' })}</span>
+      </div>
     </Tooltip>
   )
 }

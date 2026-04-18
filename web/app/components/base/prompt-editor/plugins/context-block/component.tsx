@@ -1,20 +1,17 @@
 import type { FC } from 'react'
+import type { Dataset } from './index'
+
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  RiAddLine,
-} from '@remixicon/react'
-import { useSelectOrDelete, useTrigger } from '../../hooks'
-import { UPDATE_DATASETS_EVENT_EMITTER } from '../../constants'
-import type { Dataset } from './index'
-import { DELETE_CONTEXT_BLOCK_COMMAND } from './index'
-import { File05, Folder } from '@/app/components/base/icons/src/vender/solid/files'
 import {
   PortalToFollowElem,
   PortalToFollowElemContent,
   PortalToFollowElemTrigger,
 } from '@/app/components/base/portal-to-follow-elem'
 import { useEventEmitterContextContext } from '@/context/event-emitter'
+import { UPDATE_DATASETS_EVENT_EMITTER } from '../../constants'
+import { useSelectOrDelete, useTrigger } from '../../hooks'
+import { DELETE_CONTEXT_BLOCK_COMMAND } from './index'
 
 type ContextBlockComponentProps = {
   nodeKey: string
@@ -41,18 +38,21 @@ const ContextBlockComponent: FC<ContextBlockComponentProps> = ({
   })
 
   return (
-    <div className={`
-      group inline-flex items-center pl-1 pr-0.5 h-6 border border-transparent bg-[#F4F3FF] text-[#6938EF] rounded-[5px] hover:bg-[#EBE9FE]
-      ${open ? 'bg-[#EBE9FE]' : 'bg-[#F4F3FF]'}
-      ${isSelected && '!border-[#9B8AFB]'}
-    `} ref={ref}>
-      <File05 className='mr-1 w-[14px] h-[14px]' />
-      <div className='mr-1 text-xs font-medium'>{t('common.promptEditor.context.item.title')}</div>
+    <div
+      className={`
+      group inline-flex h-6 items-center rounded-[5px] border border-transparent bg-[#F4F3FF] pr-0.5 pl-1 text-[#6938EF] hover:bg-[#EBE9FE]
+      ${open ? 'bg-[#EBE9FE]' : ''}
+      ${isSelected && 'border-[#9B8AFB]!'}
+    `}
+      ref={ref}
+    >
+      <span className="mr-1 i-custom-vender-solid-files-file-05 h-[14px] w-[14px]" data-testid="file-icon" />
+      <div className="mr-1 text-xs font-medium">{t('promptEditor.context.item.title', { ns: 'common' })}</div>
       {!canNotAddContext && (
         <PortalToFollowElem
           open={open}
           onOpenChange={setOpen}
-          placement='bottom-end'
+          placement="bottom-end"
           offset={{
             mainAxis: 3,
             alignmentAxis: -147,
@@ -60,37 +60,39 @@ const ContextBlockComponent: FC<ContextBlockComponentProps> = ({
         >
           <PortalToFollowElemTrigger ref={triggerRef}>
             <div className={`
-            flex items-center justify-center w-[18px] h-[18px] text-[11px] font-semibold rounded cursor-pointer
+            flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded text-[11px] font-semibold
             ${open ? 'bg-[#6938EF] text-white' : 'bg-white/50 group-hover:bg-white group-hover:shadow-xs'}
-          `}>{localDatasets.length}</div>
+          `}>
+              {localDatasets.length}
+            </div>
           </PortalToFollowElemTrigger>
           <PortalToFollowElemContent style={{ zIndex: 100 }}>
-            <div className='w-[360px] bg-white rounded-xl shadow-lg'>
-              <div className='p-4'>
-                <div className='mb-2 text-xs font-medium text-gray-500'>
-                  {t('common.promptEditor.context.modal.title', { num: localDatasets.length })}
+            <div className="w-[360px] rounded-xl bg-white shadow-lg">
+              <div className="p-4">
+                <div className="mb-2 text-xs font-medium text-gray-500">
+                  {t('promptEditor.context.modal.title', { ns: 'common', num: localDatasets.length })}
                 </div>
-                <div className='max-h-[270px] overflow-y-auto'>
+                <div className="max-h-[270px] overflow-y-auto">
                   {
                     localDatasets.map(dataset => (
-                      <div key={dataset.id} className='flex items-center h-8'>
-                        <div className='flex items-center justify-center shrink-0 mr-2 w-6 h-6 bg-[#F5F8FF] rounded-md border-[0.5px] border-[#EAECF5]'>
-                          <Folder className='w-4 h-4 text-[#444CE7]' />
+                      <div key={dataset.id} className="flex h-8 items-center">
+                        <div className="mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-[0.5px] border-[#EAECF5] bg-[#F5F8FF]">
+                          <span className="i-custom-vender-solid-files-folder h-4 w-4 text-[#444CE7]" data-testid="folder-icon" />
                         </div>
-                        <div className='text-sm text-gray-800 truncate' title=''>{dataset.name}</div>
+                        <div className="truncate text-sm text-gray-800" title="">{dataset.name}</div>
                       </div>
                     ))
                   }
                 </div>
-                <div className='flex items-center h-8 text-[#155EEF] cursor-pointer' onClick={onAddContext}>
-                  <div className='shrink-0 flex justify-center items-center mr-2 w-6 h-6 rounded-md border-[0.5px] border-gray-100'>
-                    <RiAddLine className='w-[14px] h-[14px]' />
+                <div className="flex h-8 cursor-pointer items-center text-[#155EEF]" onClick={onAddContext}>
+                  <div className="mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-[0.5px] border-gray-100" data-testid="add-button">
+                    <span className="i-ri-add-line h-[14px] w-[14px]" />
                   </div>
-                  <div className='text-[13px] font-medium' title=''>{t('common.promptEditor.context.modal.add')}</div>
+                  <div className="text-[13px] font-medium" title="">{t('promptEditor.context.modal.add', { ns: 'common' })}</div>
                 </div>
               </div>
-              <div className='px-4 py-3 text-xs text-gray-500 bg-gray-50 border-t-[0.5px] border-gray-50 rounded-b-xl'>
-                {t('common.promptEditor.context.modal.footer')}
+              <div className="rounded-b-xl border-t-[0.5px] border-gray-50 bg-gray-50 px-4 py-3 text-xs text-gray-500">
+                {t('promptEditor.context.modal.footer', { ns: 'common' })}
               </div>
             </div>
           </PortalToFollowElemContent>

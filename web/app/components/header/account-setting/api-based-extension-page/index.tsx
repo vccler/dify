@@ -1,20 +1,17 @@
-import { useTranslation } from 'react-i18next'
-import useSWR from 'swr'
+import { Button } from '@langgenius/dify-ui/button'
 import {
   RiAddLine,
 } from '@remixicon/react'
-import Item from './item'
-import Empty from './empty'
+import { useTranslation } from 'react-i18next'
 import { useModalContext } from '@/context/modal-context'
-import { fetchApiBasedExtensionList } from '@/service/common'
+import { useApiBasedExtensions } from '@/service/use-common'
+import Empty from './empty'
+import Item from './item'
 
 const ApiBasedExtensionPage = () => {
   const { t } = useTranslation()
   const { setShowApiBasedExtensionModal } = useModalContext()
-  const { data, mutate, isLoading } = useSWR(
-    '/api-based-extension',
-    fetchApiBasedExtensionList,
-  )
+  const { data, refetch: mutate, isPending: isLoading } = useApiBasedExtensions()
 
   const handleOpenApiBasedExtensionModal = () => {
     setShowApiBasedExtensionModal({
@@ -41,13 +38,14 @@ const ApiBasedExtensionPage = () => {
           ))
         )
       }
-      <div
-        className='flex items-center justify-center px-3 h-8 text-[13px] font-medium text-gray-700 rounded-lg bg-gray-50 cursor-pointer'
+      <Button
+        variant="secondary"
+        className="w-full"
         onClick={handleOpenApiBasedExtensionModal}
       >
-        <RiAddLine className='mr-2 w-4 h-4' />
-        {t('common.apiBasedExtension.add')}
-      </div>
+        <RiAddLine className="mr-1 h-4 w-4" />
+        {t('apiBasedExtension.add', { ns: 'common' })}
+      </Button>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import type { FC } from 'react'
+import { Notion } from '@/app/components/base/icons/src/public/common'
 import {
   Csv,
   Doc,
@@ -11,7 +12,6 @@ import {
   Unknown,
   Xlsx,
 } from '@/app/components/base/icons/src/public/files'
-import { Notion } from '@/app/components/base/icons/src/public/common'
 
 type FileIconProps = {
   type: string
@@ -36,6 +36,7 @@ const FileIcon: FC<FileIconProps> = ({
       return <Json className={className} />
     case 'md':
     case 'markdown':
+    case 'mdx':
       return <Md className={className} />
     case 'pdf':
       return <Pdf className={className} />

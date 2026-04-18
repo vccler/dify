@@ -17,13 +17,14 @@ class HuaweiObsStorage(BaseStorage):
             access_key_id=dify_config.HUAWEI_OBS_ACCESS_KEY,
             secret_access_key=dify_config.HUAWEI_OBS_SECRET_KEY,
             server=dify_config.HUAWEI_OBS_SERVER,
+            path_style=dify_config.HUAWEI_OBS_PATH_STYLE,
         )
 
     def save(self, filename, data):
         self.client.putObject(bucketName=self.bucket_name, objectKey=filename, content=data)
 
     def load_once(self, filename: str) -> bytes:
-        data = self.client.getObject(bucketName=self.bucket_name, objectKey=filename)["body"].response.read()
+        data: bytes = self.client.getObject(bucketName=self.bucket_name, objectKey=filename)["body"].response.read()
         return data
 
     def load_stream(self, filename: str) -> Generator:
@@ -40,12 +41,12 @@ class HuaweiObsStorage(BaseStorage):
             return False
         return True
 
-    def delete(self, filename):
+    def delete(self, filename: str):
         self.client.deleteObject(bucketName=self.bucket_name, objectKey=filename)
 
     def _get_meta(self, filename):
         res = self.client.getObjectMetadata(bucketName=self.bucket_name, objectKey=filename)
-        if res.status < 300:
+        if res and res.status and res.status < 300:
             return res
         else:
             return None

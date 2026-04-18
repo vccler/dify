@@ -13,12 +13,6 @@ class CurrentPasswordIncorrectError(BaseHTTPException):
     code = 400
 
 
-class ProviderRequestFailedError(BaseHTTPException):
-    error_code = "provider_request_failed"
-    description = None
-    code = 400
-
-
 class InvalidInvitationCodeError(BaseHTTPException):
     error_code = "invalid_invitation_code"
     description = "Invalid invitation code."
@@ -34,4 +28,10 @@ class AccountAlreadyInitedError(BaseHTTPException):
 class AccountNotInitializedError(BaseHTTPException):
     error_code = "account_not_initialized"
     description = "The account has not been initialized yet. Please proceed with the initialization process first."
+    code = 400
+
+
+class InvalidAccountDeletionCodeError(BaseHTTPException):
+    error_code = "invalid_account_deletion_code"
+    description = "Invalid account deletion code."
     code = 400

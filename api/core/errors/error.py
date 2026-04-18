@@ -1,12 +1,9 @@
-from typing import Optional
-
-
-class LLMError(Exception):
+class LLMError(ValueError):
     """Base class for all LLM exceptions."""
 
-    description: Optional[str] = None
+    description: str | None = None
 
-    def __init__(self, description: Optional[str] = None) -> None:
+    def __init__(self, description: str | None = None):
         self.description = description
 
 
@@ -16,7 +13,7 @@ class LLMBadRequestError(LLMError):
     description = "Bad Request"
 
 
-class ProviderTokenNotInitError(Exception):
+class ProviderTokenNotInitError(ValueError):
     """
     Custom exception raised when the provider token is not initialized.
     """
@@ -27,7 +24,7 @@ class ProviderTokenNotInitError(Exception):
         self.description = args[0] if args else self.description
 
 
-class QuotaExceededError(Exception):
+class QuotaExceededError(ValueError):
     """
     Custom exception raised when the quota for a provider has been exceeded.
     """
@@ -35,7 +32,7 @@ class QuotaExceededError(Exception):
     description = "Quota Exceeded"
 
 
-class AppInvokeQuotaExceededError(Exception):
+class AppInvokeQuotaExceededError(ValueError):
     """
     Custom exception raised when the quota for an app has been exceeded.
     """
@@ -43,7 +40,7 @@ class AppInvokeQuotaExceededError(Exception):
     description = "App Invoke Quota Exceeded"
 
 
-class ModelCurrentlyNotSupportError(Exception):
+class ModelCurrentlyNotSupportError(ValueError):
     """
     Custom exception raised when the model not support
     """
@@ -51,7 +48,7 @@ class ModelCurrentlyNotSupportError(Exception):
     description = "Model Currently Not Support"
 
 
-class InvokeRateLimitError(Exception):
+class InvokeRateLimitError(ValueError):
     """Raised when the Invoke returns rate limit error."""
 
     description = "Rate Limit Error"

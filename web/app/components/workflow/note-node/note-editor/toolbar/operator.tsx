@@ -1,17 +1,18 @@
+import { cn } from '@langgenius/dify-ui/cn'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@langgenius/dify-ui/dropdown-menu'
+import { Switch } from '@langgenius/dify-ui/switch'
 import {
   memo,
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { RiMoreFill } from '@remixicon/react'
-import cn from '@/utils/classnames'
 import ShortcutsName from '@/app/components/workflow/shortcuts-name'
-import {
-  PortalToFollowElem,
-  PortalToFollowElemContent,
-  PortalToFollowElemTrigger,
-} from '@/app/components/base/portal-to-follow-elem'
-import Switch from '@/app/components/base/switch'
 
 export type OperatorProps = {
   onCopy: () => void
@@ -31,76 +32,87 @@ const Operator = ({
   const [open, setOpen] = useState(false)
 
   return (
-    <PortalToFollowElem
+    <DropdownMenu
       open={open}
       onOpenChange={setOpen}
-      placement='bottom-end'
-      offset={4}
     >
-      <PortalToFollowElemTrigger onClick={() => setOpen(!open)}>
-        <div
-          className={cn(
-            'flex items-center justify-center w-8 h-8 cursor-pointer rounded-lg hover:bg-black/5',
-            open && 'bg-black/5',
-          )}
-        >
-          <RiMoreFill className='w-4 h-4 text-gray-500' />
-        </div>
-      </PortalToFollowElemTrigger>
-      <PortalToFollowElemContent>
-        <div className='min-w-[192px] bg-white rounded-md border-[0.5px] border-gray-200 shadow-xl'>
-          <div className='p-1'>
-            <div
-              className='flex items-center justify-between px-3 h-8 cursor-pointer rounded-md text-sm text-gray-700 hover:bg-black/5'
+      <DropdownMenuTrigger
+        nativeButton={false}
+        render={<div />}
+        aria-label={t('operation.more', { ns: 'common' })}
+        className={cn(
+          'flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-text-tertiary hover:bg-state-base-hover hover:text-text-secondary',
+          open && 'bg-state-base-hover text-text-secondary',
+        )}
+        onMouseDown={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          ;(event as typeof event & { preventBaseUIHandler?: () => void }).preventBaseUIHandler?.()
+          setOpen(prev => !prev)
+        }}
+        onClick={event => event.stopPropagation()}
+      >
+        <span aria-hidden className="i-ri-more-fill h-4 w-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        placement="bottom-end"
+        sideOffset={4}
+        popupClassName="border-0 bg-transparent p-0 shadow-none backdrop-blur-none"
+      >
+        <div className="min-w-[192px] rounded-md border-[0.5px] border-components-panel-border bg-components-panel-bg-blur shadow-xl">
+          <div className="p-1">
+            <DropdownMenuItem
+              className="justify-between rounded-md px-3 text-sm text-text-secondary"
               onClick={() => {
+                setOpen(false)
                 onCopy()
-                setOpen(false)
               }}
             >
-              {t('workflow.common.copy')}
+              {t('common.copy', { ns: 'workflow' })}
               <ShortcutsName keys={['ctrl', 'c']} />
-            </div>
-            <div
-              className='flex items-center justify-between px-3 h-8 cursor-pointer rounded-md text-sm text-gray-700 hover:bg-black/5'
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="justify-between rounded-md px-3 text-sm text-text-secondary"
               onClick={() => {
-                onDuplicate()
                 setOpen(false)
+                onDuplicate()
               }}
             >
-              {t('workflow.common.duplicate')}
+              {t('common.duplicate', { ns: 'workflow' })}
               <ShortcutsName keys={['ctrl', 'd']} />
-            </div>
+            </DropdownMenuItem>
           </div>
-          <div className='h-[1px] bg-gray-100'></div>
-          <div className='p-1'>
+          <DropdownMenuSeparator className="my-0" />
+          <div className="p-1">
             <div
-              className='flex items-center justify-between px-3 h-8 cursor-pointer rounded-md text-sm text-gray-700 hover:bg-black/5'
+              className="flex h-8 cursor-pointer items-center justify-between rounded-md px-3 text-sm text-text-secondary hover:bg-state-base-hover"
               onClick={e => e.stopPropagation()}
             >
-              <div>{t('workflow.nodes.note.editor.showAuthor')}</div>
+              <div>{t('nodes.note.editor.showAuthor', { ns: 'workflow' })}</div>
               <Switch
-                size='l'
-                defaultValue={showAuthor}
-                onChange={onShowAuthorChange}
+                size="lg"
+                checked={showAuthor}
+                onCheckedChange={onShowAuthorChange}
               />
             </div>
           </div>
-          <div className='h-[1px] bg-gray-100'></div>
-          <div className='p-1'>
-            <div
-              className='flex items-center justify-between px-3 h-8 cursor-pointer rounded-md text-sm text-gray-700 hover:text-[#D92D20] hover:bg-[#FEF3F2]'
+          <DropdownMenuSeparator className="my-0" />
+          <div className="p-1">
+            <DropdownMenuItem
+              variant="destructive"
+              className="justify-between rounded-md px-3 text-sm text-text-secondary"
               onClick={() => {
-                onDelete()
                 setOpen(false)
+                onDelete()
               }}
             >
-              {t('common.operation.delete')}
+              {t('operation.delete', { ns: 'common' })}
               <ShortcutsName keys={['del']} />
-            </div>
+            </DropdownMenuItem>
           </div>
         </div>
-      </PortalToFollowElemContent>
-    </PortalToFollowElem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 

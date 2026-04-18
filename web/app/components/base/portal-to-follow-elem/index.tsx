@@ -1,11 +1,24 @@
 'use client'
-import React from 'react'
+/**
+ * @deprecated Use semantic overlay primitives from `@/app/components/base/ui/` instead.
+ * This component will be removed after migration is complete.
+ * See: https://github.com/langgenius/dify/issues/32767
+ *
+ * Migration guide:
+ * - Tooltip → `@langgenius/dify-ui/tooltip`
+ * - Menu/Dropdown → `@langgenius/dify-ui/dropdown-menu`
+ * - Popover → `@langgenius/dify-ui/popover`
+ * - Dialog/Modal → `@langgenius/dify-ui/dialog`
+ * - Select → `@langgenius/dify-ui/select`
+ */
+import type { OffsetOptions, Placement } from '@floating-ui/react'
 import {
-  FloatingPortal,
   autoUpdate,
   flip,
+  FloatingPortal,
   offset,
   shift,
+  size,
   useDismiss,
   useFloating,
   useFocus,
@@ -15,8 +28,10 @@ import {
   useRole,
 } from '@floating-ui/react'
 
-import type { OffsetOptions, Placement } from '@floating-ui/react'
-import cn from '@/utils/classnames'
+import { cn } from '@langgenius/dify-ui/cn'
+import * as React from 'react'
+import { useCallback, useState } from 'react'
+
 export type PortalToFollowElemOptions = {
   /*
   * top, bottom, left, right
@@ -27,20 +42,28 @@ export type PortalToFollowElemOptions = {
   open?: boolean
   offset?: number | OffsetOptions
   onOpenChange?: (open: boolean) => void
+  triggerPopupSameWidth?: boolean
 }
 
-export function usePortalToFollowElem({
+/** @deprecated Use semantic overlay primitives instead. See #32767. */
+function usePortalToFollowElem({
   placement = 'bottom',
-  open,
+  open: controlledOpen,
   offset: offsetValue = 0,
   onOpenChange: setControlledOpen,
+  triggerPopupSameWidth,
 }: PortalToFollowElemOptions = {}) {
-  const setOpen = setControlledOpen
+  const [localOpen, setLocalOpen] = useState(false)
+  const open = controlledOpen ?? localOpen
+  const handleOpenChange = useCallback((newOpen: boolean) => {
+    setLocalOpen(newOpen)
+    setControlledOpen?.(newOpen)
+  }, [setControlledOpen, setLocalOpen])
 
   const data = useFloating({
     placement,
     open,
-    onOpenChange: setOpen,
+    onOpenChange: handleOpenChange,
     whileElementsMounted: autoUpdate,
     middleware: [
       offset(offsetValue),
@@ -50,6 +73,15 @@ export function usePortalToFollowElem({
         padding: 5,
       }),
       shift({ padding: 5 }),
+      size({
+        apply({ rects, elements, availableHeight }) {
+          Object.assign(elements.floating.style, {
+            maxHeight: `${Math.max(0, availableHeight)}px`,
+            overflowY: 'auto',
+            ...(triggerPopupSameWidth && { width: `${rects.reference.width}px` }),
+          })
+        },
+      }),
     ],
   })
 
@@ -57,10 +89,10 @@ export function usePortalToFollowElem({
 
   const hover = useHover(context, {
     move: false,
-    enabled: open == null,
+    enabled: controlledOpen === undefined,
   })
   const focus = useFocus(context, {
-    enabled: open == null,
+    enabled: controlledOpen === undefined,
   })
   const dismiss = useDismiss(context)
   const role = useRole(context, { role: 'tooltip' })
@@ -70,11 +102,11 @@ export function usePortalToFollowElem({
   return React.useMemo(
     () => ({
       open,
-      setOpen,
+      setOpen: handleOpenChange,
       ...interactions,
       ...data,
     }),
-    [open, setOpen, interactions, data],
+    [open, handleOpenChange, interactions, data],
   )
 }
 
@@ -82,7 +114,7 @@ type ContextType = ReturnType<typeof usePortalToFollowElem> | null
 
 const PortalToFollowElemContext = React.createContext<ContextType>(null)
 
-export function usePortalToFollowElemContext() {
+function usePortalToFollowElemContext() {
   const context = React.useContext(PortalToFollowElemContext)
 
   if (context == null)
@@ -91,6 +123,7 @@ export function usePortalToFollowElemContext() {
   return context
 }
 
+/** @deprecated Use semantic overlay primitives instead. See #32767. */
 export function PortalToFollowElem({
   children,
   ...options
@@ -105,24 +138,30 @@ export function PortalToFollowElem({
   )
 }
 
-export const PortalToFollowElemTrigger = React.forwardRef<
-HTMLElement,
-React.HTMLProps<HTMLElement> & { asChild?: boolean }
->(({ children, asChild = false, ...props }, propRef) => {
+/** @deprecated Use semantic overlay primitives instead. See #32767. */
+export const PortalToFollowElemTrigger = (
+  {
+    ref: propRef,
+    children,
+    asChild = false,
+    ...props
+  }: React.HTMLProps<HTMLElement> & { ref?: React.RefObject<HTMLElement | null>, asChild?: boolean },
+) => {
   const context = usePortalToFollowElemContext()
-  const childrenRef = (children as any).ref
+  const childrenRef = (children as any).props?.ref
   const ref = useMergeRefs([context.refs.setReference, propRef, childrenRef])
 
   // `asChild` allows the user to pass any element as the anchor
   if (asChild && React.isValidElement(children)) {
+    const childProps = (children.props ?? {}) as Record<string, unknown>
     return React.cloneElement(
       children,
       context.getReferenceProps({
         ref,
         ...props,
-        ...children.props,
+        ...childProps,
         'data-state': context.open ? 'open' : 'closed',
-      }),
+      } as React.HTMLProps<HTMLElement>),
     )
   }
 
@@ -137,13 +176,19 @@ React.HTMLProps<HTMLElement> & { asChild?: boolean }
       {children}
     </div>
   )
-})
+}
 PortalToFollowElemTrigger.displayName = 'PortalToFollowElemTrigger'
 
-export const PortalToFollowElemContent = React.forwardRef<
-HTMLDivElement,
-React.HTMLProps<HTMLDivElement>
->(({ style, ...props }, propRef) => {
+/** @deprecated Use semantic overlay primitives instead. See #32767. */
+export const PortalToFollowElemContent = (
+  {
+    ref: propRef,
+    style,
+    ...props
+  }: React.HTMLProps<HTMLDivElement> & {
+    ref?: React.RefObject<HTMLDivElement | null>
+  },
+) => {
   const context = usePortalToFollowElemContext()
   const ref = useMergeRefs([context.refs.setFloating, propRef])
 
@@ -159,11 +204,12 @@ React.HTMLProps<HTMLDivElement>
         style={{
           ...context.floatingStyles,
           ...style,
+          visibility: context.middlewareData.hide?.referenceHidden ? 'hidden' : 'visible',
         }}
         {...context.getFloatingProps(props)}
       />
     </FloatingPortal>
   )
-})
+}
 
 PortalToFollowElemContent.displayName = 'PortalToFollowElemContent'

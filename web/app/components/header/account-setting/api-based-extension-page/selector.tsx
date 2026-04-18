@@ -1,21 +1,21 @@
 import type { FC } from 'react'
-import { useState } from 'react'
-import useSWR from 'swr'
-import { useTranslation } from 'react-i18next'
 import {
   RiAddLine,
   RiArrowDownSLine,
 } from '@remixicon/react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+  ArrowUpRight,
+} from '@/app/components/base/icons/src/vender/line/arrows'
 import {
   PortalToFollowElem,
   PortalToFollowElemContent,
   PortalToFollowElemTrigger,
 } from '@/app/components/base/portal-to-follow-elem'
-import {
-  ArrowUpRight,
-} from '@/app/components/base/icons/src/vender/line/arrows'
+import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
 import { useModalContext } from '@/context/modal-context'
-import { fetchApiBasedExtensionList } from '@/service/common'
+import { useApiBasedExtensions } from '@/service/use-common'
 
 type ApiBasedExtensionSelectorProps = {
   value: string
@@ -32,10 +32,7 @@ const ApiBasedExtensionSelector: FC<ApiBasedExtensionSelectorProps> = ({
     setShowAccountSettingModal,
     setShowApiBasedExtensionModal,
   } = useModalContext()
-  const { data, mutate } = useSWR(
-    '/api-based-extension',
-    fetchApiBasedExtensionList,
-  )
+  const { data, refetch: mutate } = useApiBasedExtensions()
   const handleSelect = (id: string) => {
     onChange(id)
     setOpen(false)
@@ -47,75 +44,75 @@ const ApiBasedExtensionSelector: FC<ApiBasedExtensionSelectorProps> = ({
     <PortalToFollowElem
       open={open}
       onOpenChange={setOpen}
-      placement='bottom-start'
+      placement="bottom-start"
       offset={4}
     >
-      <PortalToFollowElemTrigger onClick={() => setOpen(v => !v)} className='w-full'>
+      <PortalToFollowElemTrigger onClick={() => setOpen(v => !v)} className="w-full">
         {
           currentItem
             ? (
-              <div className='flex items-center justify-between pl-3 pr-2.5 h-9 bg-gray-100 rounded-lg cursor-pointer'>
-                <div className='text-sm text-gray-900'>{currentItem.name}</div>
-                <div className='flex items-center'>
-                  <div className='mr-1.5 w-[270px] text-xs text-gray-400 truncate text-right'>
-                    {currentItem.api_endpoint}
+                <div className="flex h-9 cursor-pointer items-center justify-between rounded-lg bg-components-input-bg-normal pr-2.5 pl-3">
+                  <div className="text-sm text-text-primary">{currentItem.name}</div>
+                  <div className="flex items-center">
+                    <div className="mr-1.5 w-[270px] truncate text-right text-xs text-text-quaternary">
+                      {currentItem.api_endpoint}
+                    </div>
+                    <RiArrowDownSLine className={`h-4 w-4 text-text-secondary ${!open && 'opacity-60'}`} />
                   </div>
-                  <RiArrowDownSLine className={`w-4 h-4 text-gray-700 ${!open && 'opacity-60'}`} />
                 </div>
-              </div>
-            )
+              )
             : (
-              <div className='flex items-center justify-between pl-3 pr-2.5 h-9 bg-gray-100 rounded-lg text-sm text-gray-400 cursor-pointer'>
-                {t('common.apiBasedExtension.selector.placeholder')}
-                <RiArrowDownSLine className={`w-4 h-4 text-gray-700 ${!open && 'opacity-60'}`} />
-              </div>
-            )
+                <div className="flex h-9 cursor-pointer items-center justify-between rounded-lg bg-components-input-bg-normal pr-2.5 pl-3 text-sm text-text-quaternary">
+                  {t('apiBasedExtension.selector.placeholder', { ns: 'common' })}
+                  <RiArrowDownSLine className={`h-4 w-4 text-text-secondary ${!open && 'opacity-60'}`} />
+                </div>
+              )
         }
       </PortalToFollowElemTrigger>
-      <PortalToFollowElemContent className='w-[calc(100%-32px)] max-w-[576px] z-[102]'>
-        <div className='w-full rounded-lg border-[0.5px] border-gray-200 bg-white shadow-lg z-10'>
-          <div className='p-1'>
-            <div className='flex items-center justify-between px-3 pt-2 pb-1'>
-              <div className='text-xs font-medium text-gray-500'>
-                {t('common.apiBasedExtension.selector.title')}
+      <PortalToFollowElemContent className="z-1002 w-[calc(100%-32px)] max-w-[576px]">
+        <div className="z-10 w-full rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-bg shadow-lg">
+          <div className="p-1">
+            <div className="flex items-center justify-between px-3 pt-2 pb-1">
+              <div className="text-xs font-medium text-text-tertiary">
+                {t('apiBasedExtension.selector.title', { ns: 'common' })}
               </div>
               <div
-                className='flex items-center text-xs text-primary-600 cursor-pointer'
+                className="flex cursor-pointer items-center text-xs text-text-accent"
                 onClick={() => {
                   setOpen(false)
-                  setShowAccountSettingModal({ payload: 'api-based-extension' })
+                  setShowAccountSettingModal({ payload: ACCOUNT_SETTING_TAB.API_BASED_EXTENSION })
                 }}
               >
-                {t('common.apiBasedExtension.selector.manage')}
-                <ArrowUpRight className='ml-0.5 w-3 h-3' />
+                {t('apiBasedExtension.selector.manage', { ns: 'common' })}
+                <ArrowUpRight className="ml-0.5 h-3 w-3" />
               </div>
             </div>
-            <div className='max-h-[250px] overflow-y-auto'>
+            <div className="max-h-[250px] overflow-y-auto">
               {
                 data?.map(item => (
                   <div
                     key={item.id}
-                    className='px-3 py-1.5 w-full cursor-pointer hover:bg-gray-50 rounded-md text-left'
+                    className="w-full cursor-pointer rounded-md px-3 py-1.5 text-left hover:stroke-state-base-hover"
                     onClick={() => handleSelect(item.id!)}
                   >
-                    <div className='text-sm text-gray-900'>{item.name}</div>
-                    <div className='text-xs text-gray-500'>{item.api_endpoint}</div>
+                    <div className="text-sm text-text-primary">{item.name}</div>
+                    <div className="text-xs text-text-tertiary">{item.api_endpoint}</div>
                   </div>
                 ))
               }
             </div>
           </div>
-          <div className='h-[1px] bg-gray-100' />
-          <div className='p-1'>
+          <div className="h-px bg-divider-regular" />
+          <div className="p-1">
             <div
-              className='flex items-center px-3 h-8 text-sm text-primary-600 cursor-pointer'
+              className="flex h-8 cursor-pointer items-center px-3 text-sm text-text-accent"
               onClick={() => {
                 setOpen(false)
                 setShowApiBasedExtensionModal({ payload: {}, onSaveCallback: () => mutate() })
               }}
             >
-              <RiAddLine className='mr-2 w-4 h-4' />
-              {t('common.operation.add')}
+              <RiAddLine className="mr-2 h-4 w-4" />
+              {t('operation.add', { ns: 'common' })}
             </div>
           </div>
         </div>

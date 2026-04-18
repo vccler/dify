@@ -1,117 +1,155 @@
-import React, { useEffect } from 'react'
+import type { NavIcon } from './nav-link'
+import { cn } from '@langgenius/dify-ui/cn'
+import { useHover, useKeyPress } from 'ahooks'
+import * as React from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import NavLink from './navLink'
-import type { NavIcon } from './navLink'
-import AppBasic from './basic'
-import AppInfo from './app-info'
-import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
-import {
-  AlignLeft01,
-  AlignRight01,
-} from '@/app/components/base/icons/src/vender/line/layout'
 import { useStore as useAppStore } from '@/app/components/app/store'
+import { useEventEmitterContextContext } from '@/context/event-emitter'
+import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
+import { usePathname } from '@/next/navigation'
+import Divider from '../base/divider'
+import { getKeyboardKeyCodeBySystem } from '../workflow/utils'
+import AppInfo from './app-info'
+import AppSidebarDropdown from './app-sidebar-dropdown'
+import DatasetInfo from './dataset-info'
+import DatasetSidebarDropdown from './dataset-sidebar-dropdown'
+import NavLink from './nav-link'
+import ToggleButton from './toggle-button'
 
-export type IAppDetailNavProps = {
-  iconType?: 'app' | 'dataset' | 'notion'
-  title: string
-  desc: string
-  isExternal?: boolean
-  icon: string
-  icon_background: string
+type IAppDetailNavProps = {
+  iconType?: 'app' | 'dataset'
   navigation: Array<{
     name: string
     href: string
     icon: NavIcon
     selectedIcon: NavIcon
+    disabled?: boolean
   }>
   extraInfo?: (modeState: string) => React.ReactNode
 }
 
-const AppDetailNav = ({ title, desc, isExternal, icon, icon_background, navigation, extraInfo, iconType = 'app' }: IAppDetailNavProps) => {
-  const { appSidebarExpand, setAppSiderbarExpand } = useAppStore(useShallow(state => ({
+const AppDetailNav = ({
+  navigation,
+  extraInfo,
+  iconType = 'app',
+}: IAppDetailNavProps) => {
+  const { appSidebarExpand, setAppSidebarExpand } = useAppStore(useShallow(state => ({
     appSidebarExpand: state.appSidebarExpand,
-    setAppSiderbarExpand: state.setAppSiderbarExpand,
+    setAppSidebarExpand: state.setAppSidebarExpand,
   })))
+  const sidebarRef = React.useRef<HTMLDivElement>(null)
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
   const expand = appSidebarExpand === 'expand'
 
-  const handleToggle = (state: string) => {
-    setAppSiderbarExpand(state === 'expand' ? 'collapse' : 'expand')
-  }
+  const handleToggle = useCallback(() => {
+    setAppSidebarExpand(appSidebarExpand === 'expand' ? 'collapse' : 'expand')
+  }, [appSidebarExpand, setAppSidebarExpand])
+
+  const isHoveringSidebar = useHover(sidebarRef)
+
+  // Check if the current path is a workflow canvas & fullscreen
+  const pathname = usePathname()
+  const inWorkflowCanvas = pathname.endsWith('/workflow')
+  const isPipelineCanvas = pathname.endsWith('/pipeline')
+  const workflowCanvasMaximize = localStorage.getItem('workflow-canvas-maximize') === 'true'
+  const [hideHeader, setHideHeader] = useState(workflowCanvasMaximize)
+  const { eventEmitter } = useEventEmitterContextContext()
+
+  eventEmitter?.useSubscription((v: any) => {
+    if (v?.type === 'workflow-canvas-maximize')
+      setHideHeader(v.payload)
+  })
 
   useEffect(() => {
     if (appSidebarExpand) {
       localStorage.setItem('app-detail-collapse-or-expand', appSidebarExpand)
-      setAppSiderbarExpand(appSidebarExpand)
+      setAppSidebarExpand(appSidebarExpand)
     }
-  }, [appSidebarExpand, setAppSiderbarExpand])
+  }, [appSidebarExpand, setAppSidebarExpand])
+
+  useKeyPress(`${getKeyboardKeyCodeBySystem('ctrl')}.b`, (e) => {
+    e.preventDefault()
+    handleToggle()
+  }, { exactMatch: true, useCapture: true })
+
+  if (inWorkflowCanvas && hideHeader) {
+    return (
+      <div className="flex w-0 shrink-0">
+        <AppSidebarDropdown navigation={navigation} />
+      </div>
+    )
+  }
+
+  if (isPipelineCanvas && hideHeader) {
+    return (
+      <div className="flex w-0 shrink-0">
+        <DatasetSidebarDropdown navigation={navigation} />
+      </div>
+    )
+  }
 
   return (
     <div
-      className={`
-        shrink-0 flex flex-col bg-background-default-subtle border-r border-divider-burn transition-all
-        ${expand ? 'w-[216px]' : 'w-14'}
-      `}
+      ref={sidebarRef}
+      className={cn(
+        'flex shrink-0 flex-col border-r border-divider-burn bg-background-default-subtle transition-all',
+        expand ? 'w-[216px]' : 'w-14',
+      )}
     >
       <div
-        className={`
-          shrink-0
-          ${expand ? 'p-3' : 'p-2'}
-        `}
+        className={cn(
+          'shrink-0',
+          expand ? 'p-2' : 'p-1',
+        )}
       >
         {iconType === 'app' && (
           <AppInfo expand={expand} />
         )}
         {iconType !== 'app' && (
-          <AppBasic
-            mode={appSidebarExpand}
-            iconType={iconType}
-            icon={icon}
-            icon_background={icon_background}
-            name={title}
-            type={desc}
-            isExternal={isExternal}
+          <DatasetInfo expand={expand} />
+        )}
+      </div>
+      <div className="relative px-4 py-2">
+        <Divider
+          type="horizontal"
+          bgStyle={expand ? 'gradient' : 'solid'}
+          className={cn(
+            'my-0 h-px',
+            expand
+              ? 'bg-linear-to-r from-divider-subtle to-background-gradient-mask-transparent'
+              : 'bg-divider-subtle',
+          )}
+        />
+        {!isMobile && isHoveringSidebar && (
+          <ToggleButton
+            className="absolute top-[-3.5px] -right-3 z-20"
+            expand={expand}
+            handleToggle={handleToggle}
           />
         )}
       </div>
-      {!expand && (
-        <div className='mt-1 mx-auto w-6 h-[1px] bg-divider-subtle' />
-      )}
       <nav
-        className={`
-          grow space-y-1
-          ${expand ? 'p-4' : 'px-2.5 py-4'}
-        `}
+        className={cn(
+          'flex grow flex-col gap-y-0.5',
+          expand ? 'px-3 py-2' : 'p-3',
+        )}
       >
         {navigation.map((item, index) => {
           return (
-            <NavLink key={index} mode={appSidebarExpand} iconMap={{ selected: item.selectedIcon, normal: item.icon }} name={item.name} href={item.href} />
+            <NavLink
+              key={index}
+              mode={appSidebarExpand}
+              iconMap={{ selected: item.selectedIcon, normal: item.icon }}
+              name={item.name}
+              href={item.href}
+              disabled={!!item.disabled}
+            />
           )
         })}
-        {extraInfo && extraInfo(appSidebarExpand)}
       </nav>
-      {
-        !isMobile && (
-          <div
-            className={`
-              shrink-0 py-3
-              ${expand ? 'px-6' : 'px-4'}
-            `}
-          >
-            <div
-              className='flex items-center justify-center w-6 h-6 text-gray-500 cursor-pointer'
-              onClick={() => handleToggle(appSidebarExpand)}
-            >
-              {
-                expand
-                  ? <AlignLeft01 className='w-[14px] h-[14px]' />
-                  : <AlignRight01 className='w-[14px] h-[14px]' />
-              }
-            </div>
-          </div>
-        )
-      }
+      {iconType !== 'app' && extraInfo && extraInfo(appSidebarExpand)}
     </div>
   )
 }

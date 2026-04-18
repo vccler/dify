@@ -1,8 +1,4 @@
-import {
-  memo,
-  useMemo,
-} from 'react'
-import { useTranslation } from 'react-i18next'
+import { cn } from '@langgenius/dify-ui/cn'
 import {
   RiBold,
   RiItalic,
@@ -10,10 +6,14 @@ import {
   RiListUnordered,
   RiStrikethrough,
 } from '@remixicon/react'
+import {
+  memo,
+  useMemo,
+} from 'react'
+import { useTranslation } from 'react-i18next'
+import Tooltip from '@/app/components/base/tooltip'
 import { useStore } from '../store'
 import { useCommand } from './hooks'
-import cn from '@/utils/classnames'
-import Tooltip from '@/app/components/base/tooltip'
 
 type CommandProps = {
   type: 'bold' | 'italic' | 'strikethrough' | 'link' | 'bullet'
@@ -32,30 +32,30 @@ const Command = ({
   const icon = useMemo(() => {
     switch (type) {
       case 'bold':
-        return <RiBold className={cn('w-4 h-4', selectedIsBold && 'text-primary-600')} />
+        return <RiBold className={cn('h-4 w-4', selectedIsBold && 'text-primary-600')} />
       case 'italic':
-        return <RiItalic className={cn('w-4 h-4', selectedIsItalic && 'text-primary-600')} />
+        return <RiItalic className={cn('h-4 w-4', selectedIsItalic && 'text-primary-600')} />
       case 'strikethrough':
-        return <RiStrikethrough className={cn('w-4 h-4', selectedIsStrikeThrough && 'text-primary-600')} />
+        return <RiStrikethrough className={cn('h-4 w-4', selectedIsStrikeThrough && 'text-primary-600')} />
       case 'link':
-        return <RiLink className={cn('w-4 h-4', selectedIsLink && 'text-primary-600')} />
+        return <RiLink className={cn('h-4 w-4', selectedIsLink && 'text-primary-600')} />
       case 'bullet':
-        return <RiListUnordered className={cn('w-4 h-4', selectedIsBullet && 'text-primary-600')} />
+        return <RiListUnordered className={cn('h-4 w-4', selectedIsBullet && 'text-primary-600')} />
     }
   }, [type, selectedIsBold, selectedIsItalic, selectedIsStrikeThrough, selectedIsLink, selectedIsBullet])
 
   const tip = useMemo(() => {
     switch (type) {
       case 'bold':
-        return t('workflow.nodes.note.editor.bold')
+        return t('nodes.note.editor.bold', { ns: 'workflow' })
       case 'italic':
-        return t('workflow.nodes.note.editor.italic')
+        return t('nodes.note.editor.italic', { ns: 'workflow' })
       case 'strikethrough':
-        return t('workflow.nodes.note.editor.strikethrough')
+        return t('nodes.note.editor.strikethrough', { ns: 'workflow' })
       case 'link':
-        return t('workflow.nodes.note.editor.link')
+        return t('nodes.note.editor.link', { ns: 'workflow' })
       case 'bullet':
-        return t('workflow.nodes.note.editor.bulletList')
+        return t('nodes.note.editor.bulletList', { ns: 'workflow' })
     }
   }, [type, t])
 
@@ -65,12 +65,12 @@ const Command = ({
     >
       <div
         className={cn(
-          'flex items-center justify-center w-8 h-8 cursor-pointer rounded-md text-gray-500 hover:text-gray-800 hover:bg-black/5',
-          type === 'bold' && selectedIsBold && 'bg-primary-50',
-          type === 'italic' && selectedIsItalic && 'bg-primary-50',
-          type === 'strikethrough' && selectedIsStrikeThrough && 'bg-primary-50',
-          type === 'link' && selectedIsLink && 'bg-primary-50',
-          type === 'bullet' && selectedIsBullet && 'bg-primary-50',
+          'flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-text-tertiary hover:bg-state-accent-active hover:text-text-accent',
+          type === 'bold' && selectedIsBold && 'bg-state-accent-active',
+          type === 'italic' && selectedIsItalic && 'bg-state-accent-active',
+          type === 'strikethrough' && selectedIsStrikeThrough && 'bg-state-accent-active',
+          type === 'link' && selectedIsLink && 'bg-state-accent-active',
+          type === 'bullet' && selectedIsBullet && 'bg-state-accent-active',
         )}
         onClick={() => handleCommand(type)}
       >

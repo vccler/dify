@@ -1,270 +1,151 @@
 import type { FC } from 'react'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import useSWR from 'swr'
-import { useRouter } from 'next/navigation'
-import { useTranslation } from 'react-i18next'
-import { omit } from 'lodash-es'
-import { ArrowRightIcon } from '@heroicons/react/24/solid'
+import type { FullDocumentDetail } from '@/models/datasets'
+import type { RETRIEVE_METHOD } from '@/types/app'
+import { Button } from '@langgenius/dify-ui/button'
 import {
-  RiErrorWarningFill,
+  RiArrowRightLine,
+  RiLoader2Fill,
+  RiTerminalBoxLine,
 } from '@remixicon/react'
-import s from './index.module.css'
-import cn from '@/utils/classnames'
-import { FieldInfo } from '@/app/components/datasets/documents/detail/metadata'
-import Button from '@/app/components/base/button'
-import type { FullDocumentDetail, IndexingStatusResponse, ProcessRuleResponse } from '@/models/datasets'
-import { fetchIndexingStatusBatch as doFetchIndexingStatus, fetchProcessRule } from '@/service/datasets'
-import { DataSourceType } from '@/models/datasets'
-import NotionIcon from '@/app/components/base/notion-icon'
-import PriorityLabel from '@/app/components/billing/priority-label'
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import Divider from '@/app/components/base/divider'
 import { Plan } from '@/app/components/billing/type'
-import { ZapFast } from '@/app/components/base/icons/src/vender/solid/general'
-import UpgradeBtn from '@/app/components/billing/upgrade-btn'
 import { useProviderContext } from '@/context/provider-context'
-import Tooltip from '@/app/components/base/tooltip'
-import { sleep } from '@/utils'
+import { useDatasetApiAccessUrl } from '@/hooks/use-api-access-url'
+import Link from '@/next/link'
+import { useRouter } from '@/next/navigation'
+import { useProcessRule } from '@/service/knowledge/use-dataset'
+import { useInvalidDocumentList } from '@/service/knowledge/use-document'
+import IndexingProgressItem from './indexing-progress-item'
+import RuleDetail from './rule-detail'
+import UpgradeBanner from './upgrade-banner'
+import { useIndexingStatusPolling } from './use-indexing-status-polling'
+import { createDocumentLookup } from './utils'
 
-type Props = {
+type EmbeddingProcessProps = {
   datasetId: string
   batchId: string
   documents?: FullDocumentDetail[]
   indexingType?: string
+  retrievalMethod?: RETRIEVE_METHOD
 }
 
-const RuleDetail: FC<{ sourceData?: ProcessRuleResponse }> = ({ sourceData }) => {
+// Status header component
+const StatusHeader: FC<{ isEmbedding: boolean, isCompleted: boolean }> = ({
+  isEmbedding,
+  isCompleted,
+}) => {
   const { t } = useTranslation()
 
-  const segmentationRuleMap = {
-    mode: t('datasetDocuments.embedding.mode'),
-    segmentLength: t('datasetDocuments.embedding.segmentLength'),
-    textCleaning: t('datasetDocuments.embedding.textCleaning'),
-  }
-
-  const getRuleName = (key: string) => {
-    if (key === 'remove_extra_spaces')
-      return t('datasetCreation.stepTwo.removeExtraSpaces')
-
-    if (key === 'remove_urls_emails')
-      return t('datasetCreation.stepTwo.removeUrlEmails')
-
-    if (key === 'remove_stopwords')
-      return t('datasetCreation.stepTwo.removeStopwords')
-  }
-
-  const getValue = useCallback((field: string) => {
-    let value: string | number | undefined = '-'
-    switch (field) {
-      case 'mode':
-        value = sourceData?.mode === 'automatic' ? (t('datasetDocuments.embedding.automatic') as string) : (t('datasetDocuments.embedding.custom') as string)
-        break
-      case 'segmentLength':
-        value = sourceData?.rules?.segmentation?.max_tokens
-        break
-      default:
-        value = sourceData?.mode === 'automatic'
-          ? (t('datasetDocuments.embedding.automatic') as string)
-          // eslint-disable-next-line array-callback-return
-          : sourceData?.rules?.pre_processing_rules?.map((rule) => {
-            if (rule.enabled)
-              return getRuleName(rule.id)
-          }).filter(Boolean).join(';')
-        break
-    }
-    return value
-  }, [sourceData])
-
-  return <div className='flex flex-col pt-8 pb-10 first:mt-0'>
-    {Object.keys(segmentationRuleMap).map((field) => {
-      return <FieldInfo
-        key={field}
-        label={segmentationRuleMap[field as keyof typeof segmentationRuleMap]}
-        displayedValue={String(getValue(field))}
-      />
-    })}
-  </div>
+  return (
+    <div className="flex items-center gap-x-1 system-md-semibold-uppercase text-text-secondary">
+      {isEmbedding && (
+        <>
+          <RiLoader2Fill className="size-4 animate-spin" />
+          <span>{t('embedding.processing', { ns: 'datasetDocuments' })}</span>
+        </>
+      )}
+      {isCompleted && t('embedding.completed', { ns: 'datasetDocuments' })}
+    </div>
+  )
 }
 
-const EmbeddingProcess: FC<Props> = ({ datasetId, batchId, documents = [], indexingType }) => {
+// Action buttons component
+const ActionButtons: FC<{
+  apiReferenceUrl: string
+  onNavToDocuments: () => void
+}> = ({ apiReferenceUrl, onNavToDocuments }) => {
   const { t } = useTranslation()
+
+  return (
+    <div className="mt-6 flex items-center gap-x-2 py-2">
+      <Link href={apiReferenceUrl} target="_blank" rel="noopener noreferrer">
+        <Button className="w-fit gap-x-0.5 px-3">
+          <RiTerminalBoxLine className="size-4" />
+          <span className="px-0.5">Access the API</span>
+        </Button>
+      </Link>
+      <Button
+        className="w-fit gap-x-0.5 px-3"
+        variant="primary"
+        onClick={onNavToDocuments}
+      >
+        <span className="px-0.5">{t('stepThree.navTo', { ns: 'datasetCreation' })}</span>
+        <RiArrowRightLine className="size-4 stroke-current stroke-1" />
+      </Button>
+    </div>
+  )
+}
+
+const EmbeddingProcess: FC<EmbeddingProcessProps> = ({
+  datasetId,
+  batchId,
+  documents = [],
+  indexingType,
+  retrievalMethod,
+}) => {
   const { enableBilling, plan } = useProviderContext()
+  const router = useRouter()
+  const invalidDocumentList = useInvalidDocumentList()
+  const apiReferenceUrl = useDatasetApiAccessUrl()
 
-  const getFirstDocument = documents[0]
-
-  const [indexingStatusBatchDetail, setIndexingStatusDetail] = useState<IndexingStatusResponse[]>([])
-  const fetchIndexingStatus = async () => {
-    const status = await doFetchIndexingStatus({ datasetId, batchId })
-    setIndexingStatusDetail(status.data)
-    return status.data
-  }
-
-  const [isStopQuery, setIsStopQuery] = useState(false)
-  const isStopQueryRef = useRef(isStopQuery)
-  useEffect(() => {
-    isStopQueryRef.current = isStopQuery
-  }, [isStopQuery])
-  const stopQueryStatus = () => {
-    setIsStopQuery(true)
-  }
-
-  const startQueryStatus = async () => {
-    if (isStopQueryRef.current)
-      return
-
-    try {
-      const indexingStatusBatchDetail = await fetchIndexingStatus()
-      const isCompleted = indexingStatusBatchDetail.every(indexingStatusDetail => ['completed', 'error', 'paused'].includes(indexingStatusDetail.indexing_status))
-      if (isCompleted) {
-        stopQueryStatus()
-        return
-      }
-      await sleep(2500)
-      await startQueryStatus()
-    }
-    catch (e) {
-      await sleep(2500)
-      await startQueryStatus()
-    }
-  }
-
-  useEffect(() => {
-    startQueryStatus()
-    return () => {
-      stopQueryStatus()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // get rule
-  const { data: ruleDetail } = useSWR({
-    action: 'fetchProcessRule',
-    params: { documentId: getFirstDocument.id },
-  }, apiParams => fetchProcessRule(omit(apiParams, 'action')), {
-    revalidateOnFocus: false,
+  // Polling hook for indexing status
+  const { statusList, isEmbedding, isEmbeddingCompleted } = useIndexingStatusPolling({
+    datasetId,
+    batchId,
   })
 
-  const router = useRouter()
-  const navToDocumentList = () => {
+  // Get process rule for the first document
+  const firstDocumentId = documents[0]?.id
+  const { data: ruleDetail } = useProcessRule(firstDocumentId)
+
+  // Document lookup utilities - memoized for performance
+  const documentLookup = useMemo(
+    () => createDocumentLookup(documents),
+    [documents],
+  )
+
+  const handleNavToDocuments = () => {
+    invalidDocumentList()
     router.push(`/datasets/${datasetId}/documents`)
   }
 
-  const isEmbedding = useMemo(() => {
-    return indexingStatusBatchDetail.some(indexingStatusDetail => ['indexing', 'splitting', 'parsing', 'cleaning'].includes(indexingStatusDetail?.indexing_status || ''))
-  }, [indexingStatusBatchDetail])
-  const isEmbeddingCompleted = useMemo(() => {
-    return indexingStatusBatchDetail.every(indexingStatusDetail => ['completed', 'error', 'paused'].includes(indexingStatusDetail?.indexing_status || ''))
-  }, [indexingStatusBatchDetail])
-
-  const getSourceName = (id: string) => {
-    const doc = documents.find(document => document.id === id)
-    return doc?.name
-  }
-  const getFileType = (name?: string) => name?.split('.').pop() || 'txt'
-  const getSourcePercent = (detail: IndexingStatusResponse) => {
-    const completedCount = detail.completed_segments || 0
-    const totalCount = detail.total_segments || 0
-    if (totalCount === 0)
-      return 0
-    const percent = Math.round(completedCount * 100 / totalCount)
-    return percent > 100 ? 100 : percent
-  }
-  const getSourceType = (id: string) => {
-    const doc = documents.find(document => document.id === id)
-    return doc?.data_source_type as DataSourceType
-  }
-
-  const getIcon = (id: string) => {
-    const doc = documents.find(document => document.id === id)
-
-    return doc?.data_source_info.notion_page_icon
-  }
-  const isSourceEmbedding = (detail: IndexingStatusResponse) => ['indexing', 'splitting', 'parsing', 'cleaning', 'waiting'].includes(detail.indexing_status || '')
+  const showUpgradeBanner = enableBilling && plan.type !== Plan.team
 
   return (
     <>
-      <div className='h-5 flex items-center mb-5'>
-        <div className={s.embeddingStatus}>
-          {isEmbedding && t('datasetDocuments.embedding.processing')}
-          {isEmbeddingCompleted && t('datasetDocuments.embedding.completed')}
+      <div className="flex flex-col gap-y-3">
+        <StatusHeader isEmbedding={isEmbedding} isCompleted={isEmbeddingCompleted} />
+
+        {showUpgradeBanner && <UpgradeBanner />}
+
+        <div className="flex flex-col gap-0.5 pb-2">
+          {statusList.map(detail => (
+            <IndexingProgressItem
+              key={detail.id}
+              detail={detail}
+              name={documentLookup.getName(detail.id)}
+              sourceType={documentLookup.getSourceType(detail.id)}
+              notionIcon={documentLookup.getNotionIcon(detail.id)}
+              enableBilling={enableBilling}
+            />
+          ))}
         </div>
+
+        <Divider type="horizontal" className="my-0 bg-divider-subtle" />
+
+        <RuleDetail
+          sourceData={ruleDetail}
+          indexingType={indexingType}
+          retrievalMethod={retrievalMethod}
+        />
       </div>
-      {
-        enableBilling && plan.type !== Plan.team && (
-          <div className='flex items-center mb-3 p-3 h-14 bg-white border-[0.5px] border-black/5 shadow-md rounded-xl'>
-            <div className='shrink-0 flex items-center justify-center w-8 h-8 bg-[#FFF6ED] rounded-lg'>
-              <ZapFast className='w-4 h-4 text-[#FB6514]' />
-            </div>
-            <div className='grow mx-3 text-[13px] font-medium text-gray-700'>
-              {t('billing.plansCommon.documentProcessingPriorityUpgrade')}
-            </div>
-            <UpgradeBtn loc='knowledge-speed-up' />
-          </div>
-        )
-      }
-      <div className={s.progressContainer}>
-        {indexingStatusBatchDetail.map(indexingStatusDetail => (
-          <div key={indexingStatusDetail.id} className={cn(
-            s.sourceItem,
-            indexingStatusDetail.indexing_status === 'error' && s.error,
-            indexingStatusDetail.indexing_status === 'completed' && s.success,
-          )}>
-            {isSourceEmbedding(indexingStatusDetail) && (
-              <div className={s.progressbar} style={{ width: `${getSourcePercent(indexingStatusDetail)}%` }} />
-            )}
-            <div className={`${s.info} grow`}>
-              {getSourceType(indexingStatusDetail.id) === DataSourceType.FILE && (
-                <div className={cn(s.fileIcon, s[getFileType(getSourceName(indexingStatusDetail.id))])} />
-              )}
-              {getSourceType(indexingStatusDetail.id) === DataSourceType.NOTION && (
-                <NotionIcon
-                  className='shrink-0 mr-1'
-                  type='page'
-                  src={getIcon(indexingStatusDetail.id)}
-                />
-              )}
-              <div className={`${s.name} truncate`} title={getSourceName(indexingStatusDetail.id)}>{getSourceName(indexingStatusDetail.id)}</div>
-              {
-                enableBilling && (
-                  <PriorityLabel />
-                )
-              }
-            </div>
-            <div className='shrink-0'>
-              {isSourceEmbedding(indexingStatusDetail) && (
-                <div className={s.percent}>{`${getSourcePercent(indexingStatusDetail)}%`}</div>
-              )}
-              {indexingStatusDetail.indexing_status === 'error' && indexingStatusDetail.error && (
-                <Tooltip
-                  popupContent={(
-                    <div className='max-w-[400px]'>
-                      {indexingStatusDetail.error}
-                    </div>
-                  )}
-                >
-                  <div className={cn(s.percent, s.error, 'flex items-center')}>
-                    Error
-                    <RiErrorWarningFill className='ml-1 w-4 h-4' />
-                  </div>
-                </Tooltip>
-              )}
-              {indexingStatusDetail.indexing_status === 'error' && !indexingStatusDetail.error && (
-                <div className={cn(s.percent, s.error, 'flex items-center')}>
-                  Error
-                </div>
-              )}
-              {indexingStatusDetail.indexing_status === 'completed' && (
-                <div className={cn(s.percent, s.success)}>100%</div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-      <RuleDetail sourceData={ruleDetail} />
-      <div className='flex items-center gap-2 mt-10'>
-        <Button className='w-fit' variant='primary' onClick={navToDocumentList}>
-          <span>{t('datasetCreation.stepThree.navTo')}</span>
-          <ArrowRightIcon className='h-4 w-4 ml-2 stroke-current stroke-1' />
-        </Button>
-      </div>
+
+      <ActionButtons
+        apiReferenceUrl={apiReferenceUrl}
+        onNavToDocuments={handleNavToDocuments}
+      />
     </>
   )
 }

@@ -1,50 +1,37 @@
 'use client'
-import React, { useState } from 'react'
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { debounce } from 'lodash-es'
-import copy from 'copy-to-clipboard'
+import { useClipboard } from '@/hooks/use-clipboard'
 import Tooltip from '../tooltip'
-import {
-  Clipboard,
-  ClipboardCheck,
-} from '@/app/components/base/icons/src/vender/line/files'
 
 type Props = {
   content: string
 }
 
-const prefixEmbedded = 'appOverview.overview.appInfo.embedded'
+const prefixEmbedded = 'overview.appInfo.embedded'
 
-export const CopyIcon = ({ content }: Props) => {
+const CopyIcon = ({ content }: Props) => {
   const { t } = useTranslation()
-  const [isCopied, setIsCopied] = useState<boolean>(false)
+  const { copied, copy, reset } = useClipboard()
 
-  const onClickCopy = debounce(() => {
+  const handleCopy = useCallback(() => {
     copy(content)
-    setIsCopied(true)
-  }, 100)
+  }, [copy, content])
 
-  const onMouseLeave = debounce(() => {
-    setIsCopied(false)
-  }, 100)
+  const tooltipText = copied
+    ? t(`${prefixEmbedded}.copied`, { ns: 'appOverview' })
+    : t(`${prefixEmbedded}.copy`, { ns: 'appOverview' })
+  /* v8 ignore next -- i18n test mock always returns a non-empty string; runtime fallback is defensive. -- @preserve */
+  const safeTooltipText = tooltipText || ''
 
   return (
     <Tooltip
-      popupContent={
-        (isCopied
-          ? t(`${prefixEmbedded}.copied`)
-          : t(`${prefixEmbedded}.copy`)) || ''
-      }
+      popupContent={safeTooltipText}
     >
-      <div onMouseLeave={onMouseLeave}>
-        {!isCopied
-          ? (
-            <Clipboard className='mx-1 w-3 h-3 text-gray-500 cursor-pointer' onClick={onClickCopy} />
-          )
-          : (
-            <ClipboardCheck className='mx-1 w-3 h-3 text-gray-500' />
-          )
-        }
+      <div onMouseLeave={reset}>
+        {!copied
+          ? (<span className="mx-1 i-custom-vender-line-files-copy h-3.5 w-3.5 cursor-pointer text-text-tertiary" onClick={handleCopy} data-testid="copy-icon" />)
+          : (<span className="mx-1 i-custom-vender-line-files-copy-check h-3.5 w-3.5 text-text-tertiary" data-testid="copied-icon" />)}
       </div>
     </Tooltip>
   )

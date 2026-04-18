@@ -1,4 +1,5 @@
-import type { I18nText } from '@/i18n/language'
+import type { I18nText } from '@/i18n-config/language'
+import type { Model } from '@/types/app'
 
 export type CommonResponse = {
   result: 'success' | 'fail'
@@ -22,6 +23,7 @@ export type UserProfileResponse = {
   name: string
   email: string
   avatar: string
+  avatar_url: string | null
   is_password_set: boolean
   interface_language?: string
   interface_theme?: string
@@ -48,21 +50,7 @@ export type LangGeniusVersionResponse = {
   current_env: string
 }
 
-export type TenantInfoResponse = {
-  name: string
-  created_at: string
-  providers: Array<{
-    provider: string
-    provider_name: string
-    token_is_set: boolean
-    is_valid: boolean
-    token_is_valid: boolean
-  }>
-  in_trail: boolean
-  trial_end_reason: null | 'trial_exceeded' | 'using_custom'
-}
-
-export type Member = Pick<UserProfileResponse, 'id' | 'name' | 'email' | 'last_login_at' | 'last_active_at' | 'created_at'> & {
+export type Member = Pick<UserProfileResponse, 'id' | 'name' | 'email' | 'last_login_at' | 'last_active_at' | 'created_at' | 'avatar_url'> & {
   avatar: string
   status: 'pending' | 'active' | 'banned' | 'closed'
   role: 'owner' | 'admin' | 'editor' | 'normal' | 'dataset_operator'
@@ -86,11 +74,6 @@ export type ProviderAzureToken = {
 export type ProviderAnthropicToken = {
   anthropic_api_key?: string
 }
-export type ProviderTokenType = {
-  [ProviderName.OPENAI]: string
-  [ProviderName.AZURE_OPENAI]: ProviderAzureToken
-  [ProviderName.ANTHROPIC]: ProviderAnthropicToken
-}
 export type Provider = {
   [Name in ProviderName]: {
     provider_name: Name
@@ -102,12 +85,6 @@ export type Provider = {
     token?: string | ProviderAzureToken | ProviderAnthropicToken
   }
 }[ProviderName]
-
-export type ProviderHosted = Provider & {
-  quota_type: string
-  quota_limit: number
-  quota_used: number
-}
 
 export type AccountIntegrate = {
   provider: 'google' | 'github'
@@ -128,7 +105,9 @@ export type IWorkspace = {
 export type ICurrentWorkspace = Omit<IWorkspace, 'current'> & {
   role: 'owner' | 'admin' | 'editor' | 'dataset_operator' | 'normal'
   providers: Provider[]
-  in_trail: boolean
+  trial_credits: number
+  trial_credits_used: number
+  next_credit_reset_date: number
   trial_end_reason?: string
   custom_config?: {
     remove_webapp_brand?: boolean
@@ -163,8 +142,6 @@ export type DataSourceNotionWorkspace = {
   pages: DataSourceNotionPage[]
 }
 
-export type DataSourceNotionWorkspaceMap = Record<string, DataSourceNotionWorkspace>
-
 export type DataSourceNotion = {
   id: string
   provider: string
@@ -172,34 +149,10 @@ export type DataSourceNotion = {
   source_info: DataSourceNotionWorkspace
 }
 
-export enum DataSourceCategory {
-  website = 'website',
-}
 export enum DataSourceProvider {
   fireCrawl = 'firecrawl',
   jinaReader = 'jinareader',
-}
-
-export type FirecrawlConfig = {
-  api_key: string
-  base_url: string
-}
-
-export type DataSourceItem = {
-  id: string
-  category: DataSourceCategory
-  provider: DataSourceProvider
-  disabled: boolean
-  created_at: number
-  updated_at: number
-}
-
-export type DataSources = {
-  sources: DataSourceItem[]
-}
-
-export type GithubRepo = {
-  stargazers_count: number
+  waterCrawl = 'watercrawl',
 }
 
 export type PluginProvider = {
@@ -213,10 +166,14 @@ export type PluginProvider = {
 export type FileUploadConfigResponse = {
   batch_count_limit: number
   image_file_size_limit?: number | string // default is 10MB
+  image_file_batch_limit: number // default is 10, for dataset attachment upload only
+  single_chunk_attachment_limit: number // default is 10, for dataset attachment upload only
+  attachment_image_file_size_limit: number // default is 2MB, for dataset attachment upload only
   file_size_limit: number // default is 15MB
   audio_file_size_limit?: number // default is 50MB
   video_file_size_limit?: number // default is 100MB
   workflow_file_upload_limit?: number // default is 10
+  file_upload_limit: number // default is 5
 }
 
 export type InvitationResult = {
@@ -245,7 +202,7 @@ export type CodeBasedExtensionForm = {
   label: I18nText
   variable: string
   required: boolean
-  options: { label: I18nText; value: string }[]
+  options: { label: I18nText, value: string }[]
   default: string
   placeholder: string
   max_length?: number
@@ -278,10 +235,12 @@ export type ModerateResponse = {
   text: string
 }
 
-export type ModerationService = (
-  url: string,
-  body: {
-    app_id: string
-    text: string
-  }
-) => Promise<ModerateResponse>
+export type StructuredOutputRulesRequestBody = {
+  instruction: string
+  model_config: Model
+}
+
+export type StructuredOutputRulesResponse = {
+  output: string
+  error?: string
+}

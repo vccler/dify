@@ -1,11 +1,11 @@
+import type { FileEntity } from '../types'
+import type { FileUpload } from '@/app/components/base/features/types'
+import { cn } from '@langgenius/dify-ui/cn'
+import { SupportUploadFileTypes } from '@/app/components/workflow/types'
 import { useFile } from '../hooks'
 import { useStore } from '../store'
-import type { FileEntity } from '../types'
 import FileImageItem from './file-image-item'
 import FileItem from './file-item'
-import type { FileUpload } from '@/app/components/base/features/types'
-import { SupportUploadFileTypes } from '@/app/components/workflow/types'
-import cn from '@/utils/classnames'
 
 type FileListProps = {
   className?: string
@@ -23,10 +23,10 @@ export const FileList = ({
   onRemove,
   showDeleteAction = true,
   showDownloadAction = false,
-  canPreview,
+  canPreview = true,
 }: FileListProps) => {
   return (
-    <div className={cn('flex flex-wrap gap-2', className)}>
+    <div className={cn('flex flex-wrap gap-2', className)} data-testid="file-list">
       {
         files.map((file) => {
           if (file.supportFileType === SupportUploadFileTypes.image) {
@@ -51,6 +51,7 @@ export const FileList = ({
               showDownloadAction={showDownloadAction}
               onRemove={onRemove}
               onReUpload={onReUpload}
+              canPreview={canPreview}
             />
           )
         })

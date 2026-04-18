@@ -1,42 +1,49 @@
 'use client'
 import type { FC } from 'react'
-import React, { useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-
-import cn from '@/utils/classnames'
-import TopKItem from '@/app/components/base/param-item/top-k-item'
-import ScoreThresholdItem from '@/app/components/base/param-item/score-threshold-item'
-import { RETRIEVE_METHOD } from '@/types/app'
-import Switch from '@/app/components/base/switch'
-import Tooltip from '@/app/components/base/tooltip'
 import type { RetrievalConfig } from '@/types/app'
-import ModelSelector from '@/app/components/header/account-setting/model-provider-page/model-selector'
-import { useCurrentProviderAndModel, useModelListAndDefaultModel } from '@/app/components/header/account-setting/model-provider-page/hooks'
+import { cn } from '@langgenius/dify-ui/cn'
+
+import { Switch } from '@langgenius/dify-ui/switch'
+import { toast } from '@langgenius/dify-ui/toast'
+import * as React from 'react'
+import { useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import WeightedScore from '@/app/components/app/configuration/dataset-config/params-config/weighted-score'
+import { AlertTriangle } from '@/app/components/base/icons/src/vender/solid/alertsAndFeedback'
+import ScoreThresholdItem from '@/app/components/base/param-item/score-threshold-item'
+import TopKItem from '@/app/components/base/param-item/top-k-item'
+import RadioCard from '@/app/components/base/radio-card'
+import Tooltip from '@/app/components/base/tooltip'
 import { ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
+import { useCurrentProviderAndModel, useModelListAndDefaultModel } from '@/app/components/header/account-setting/model-provider-page/hooks'
+import ModelSelector from '@/app/components/header/account-setting/model-provider-page/model-selector'
 import {
   DEFAULT_WEIGHTED_SCORE,
   RerankingModeEnum,
   WeightedScoreEnum,
 } from '@/models/datasets'
-import WeightedScore from '@/app/components/app/configuration/dataset-config/params-config/weighted-score'
-import Toast from '@/app/components/base/toast'
+import { RETRIEVE_METHOD } from '@/types/app'
+import ProgressIndicator from '../../create/assets/progress-indicator.svg'
+import Reranking from '../../create/assets/rerank.svg'
 
 type Props = {
   type: RETRIEVE_METHOD
   value: RetrievalConfig
+  showMultiModalTip?: boolean
   onChange: (value: RetrievalConfig) => void
 }
 
 const RetrievalParamConfig: FC<Props> = ({
   type,
   value,
+  showMultiModalTip = false,
   onChange,
 }) => {
   const { t } = useTranslation()
   const canToggleRerankModalEnable = type !== RETRIEVE_METHOD.hybrid
-  const isEconomical = type === RETRIEVE_METHOD.invertedIndex
+  const isEconomical = type === RETRIEVE_METHOD.keywordSearch
+  const isHybridSearch = type === RETRIEVE_METHOD.hybrid
   const {
-    defaultModel: rerankDefaultModel,
     modelList: rerankModelList,
   } = useModelListAndDefaultModel(ModelTypeEnum.rerank)
 
@@ -44,35 +51,27 @@ const RetrievalParamConfig: FC<Props> = ({
     currentModel,
   } = useCurrentProviderAndModel(
     rerankModelList,
-    rerankDefaultModel
-      ? {
-        ...rerankDefaultModel,
-        provider: rerankDefaultModel.provider.provider,
-      }
-      : undefined,
+    {
+      provider: value.reranking_model?.reranking_provider_name ?? '',
+      model: value.reranking_model?.reranking_model_name ?? '',
+    },
   )
 
-  const handleDisabledSwitchClick = useCallback(() => {
-    if (!currentModel)
-      Toast.notify({ type: 'error', message: t('workflow.errorMsg.rerankModelRequired') })
-  }, [currentModel, rerankDefaultModel, t])
+  const handleToggleRerankEnable = useCallback((enable: boolean) => {
+    if (enable && !currentModel)
+      toast.error(t('errorMsg.rerankModelRequired', { ns: 'workflow' }))
+    onChange({
+      ...value,
+      reranking_enable: enable,
+    })
+  }, [currentModel, onChange, value])
 
-  const isHybridSearch = type === RETRIEVE_METHOD.hybrid
-
-  const rerankModel = (() => {
-    if (value.reranking_model) {
-      return {
-        provider_name: value.reranking_model.reranking_provider_name,
-        model_name: value.reranking_model.reranking_model_name,
-      }
+  const rerankModel = useMemo(() => {
+    return {
+      provider_name: value.reranking_model.reranking_provider_name,
+      model_name: value.reranking_model.reranking_model_name,
     }
-    else if (rerankDefaultModel) {
-      return {
-        provider_name: rerankDefaultModel.provider.provider,
-        model_name: rerankDefaultModel.model,
-      }
-    }
-  })()
+  }, [value.reranking_model])
 
   const handleChangeRerankMode = (v: RerankingModeEnum) => {
     if (v === value.reranking_mode)
@@ -96,19 +95,21 @@ const RetrievalParamConfig: FC<Props> = ({
         },
       }
     }
+    if (v === RerankingModeEnum.RerankingModel && !currentModel)
+      toast.error(t('errorMsg.rerankModelRequired', { ns: 'workflow' }))
     onChange(result)
   }
 
   const rerankingModeOptions = [
     {
       value: RerankingModeEnum.WeightedScore,
-      label: t('dataset.weightedScore.title'),
-      tips: t('dataset.weightedScore.description'),
+      label: t('weightedScore.title', { ns: 'dataset' }),
+      tips: t('weightedScore.description', { ns: 'dataset' }),
     },
     {
       value: RerankingModeEnum.RerankingModel,
-      label: t('common.modelProvider.rerankModel.key'),
-      tips: t('common.modelProvider.rerankModel.tip'),
+      label: t('modelProvider.rerankModel.key', { ns: 'common' }),
+      tips: t('modelProvider.rerankModel.tip', { ns: 'common' }),
     },
   ]
 
@@ -116,56 +117,60 @@ const RetrievalParamConfig: FC<Props> = ({
     <div>
       {!isEconomical && !isHybridSearch && (
         <div>
-          <div className='flex h-8 items-center text-[13px] font-medium text-gray-900 space-x-2'>
+          <div className="mb-2 flex items-center space-x-2">
             {canToggleRerankModalEnable && (
-              <div
-                className='flex items-center'
-                onClick={handleDisabledSwitchClick}
-              >
-                <Switch
-                  size='md'
-                  defaultValue={currentModel ? value.reranking_enable : false}
-                  onChange={(v) => {
-                    onChange({
-                      ...value,
-                      reranking_enable: v,
-                    })
-                  }}
-                  disabled={!currentModel}
-                />
-              </div>
+              <Switch
+                size="md"
+                checked={value.reranking_enable}
+                onCheckedChange={handleToggleRerankEnable}
+              />
             )}
-            <div className='flex items-center'>
-              <span className='mr-0.5'>{t('common.modelProvider.rerankModel.key')}</span>
+            <div className="flex items-center">
+              <span className="mr-0.5 system-sm-semibold text-text-secondary">{t('modelProvider.rerankModel.key', { ns: 'common' })}</span>
               <Tooltip
                 popupContent={
-                  <div className="w-[200px]">{t('common.modelProvider.rerankModel.tip')}</div>
+                  <div className="w-[200px]">{t('modelProvider.rerankModel.tip', { ns: 'common' })}</div>
                 }
               />
             </div>
           </div>
-          <ModelSelector
-            triggerClassName={`${!value.reranking_enable && '!opacity-60 !cursor-not-allowed'}`}
-            defaultModel={rerankModel && { provider: rerankModel.provider_name, model: rerankModel.model_name }}
-            modelList={rerankModelList}
-            readonly={!value.reranking_enable}
-            onSelect={(v) => {
-              onChange({
-                ...value,
-                reranking_model: {
-                  reranking_provider_name: v.provider,
-                  reranking_model_name: v.model,
-                },
-              })
-            }}
-          />
+          {
+            value.reranking_enable && (
+              <>
+                <ModelSelector
+                  defaultModel={rerankModel && { provider: rerankModel.provider_name, model: rerankModel.model_name }}
+                  modelList={rerankModelList}
+                  onSelect={(v) => {
+                    onChange({
+                      ...value,
+                      reranking_model: {
+                        reranking_provider_name: v.provider,
+                        reranking_model_name: v.model,
+                      },
+                    })
+                  }}
+                />
+                {showMultiModalTip && (
+                  <div className="mt-2 flex h-10 items-center gap-x-0.5 overflow-hidden rounded-xl border-[0.5px] border-components-panel-border bg-components-panel-bg-blur p-2 shadow-xs backdrop-blur-[5px]">
+                    <div className="absolute top-0 right-0 bottom-0 left-0 bg-dataset-warning-message-bg opacity-40" />
+                    <div className="p-1">
+                      <AlertTriangle className="size-4 text-text-warning-secondary" />
+                    </div>
+                    <span className="system-xs-medium text-text-primary">
+                      {t('form.retrievalSetting.multiModalTip', { ns: 'datasetSettings' })}
+                    </span>
+                  </div>
+                )}
+              </>
+            )
+          }
         </div>
       )}
       {
         !isHybridSearch && (
-          <div className={cn(!isEconomical && 'mt-4', 'flex space-between space-x-6')}>
+          <div className={cn(!isEconomical && 'mt-4', 'space-between flex space-x-4')}>
             <TopKItem
-              className='grow'
+              className="grow"
               value={value.top_k}
               onChange={(_key, v) => {
                 onChange({
@@ -177,7 +182,7 @@ const RetrievalParamConfig: FC<Props> = ({
             />
             {(!isEconomical && !(value.search_method === RETRIEVE_METHOD.fullText && !value.reranking_enable)) && (
               <ScoreThresholdItem
-                className='grow'
+                className="grow"
                 value={value.score_threshold}
                 onChange={(_key, v) => {
                   onChange({
@@ -201,24 +206,27 @@ const RetrievalParamConfig: FC<Props> = ({
       {
         isHybridSearch && (
           <>
-            <div className='flex items-center justify-between'>
+            <div className="mb-4 flex gap-2">
               {
                 rerankingModeOptions.map(option => (
-                  <div
+                  <RadioCard
                     key={option.value}
-                    className={cn(
-                      'flex items-center justify-center mb-4 w-[calc((100%-8px)/2)] h-8 rounded-lg border border-components-option-card-option-border bg-components-option-card-option-bg cursor-pointer system-sm-medium text-text-secondary',
-                      value.reranking_mode === RerankingModeEnum.WeightedScore && option.value === RerankingModeEnum.WeightedScore && 'border-[1.5px] border-components-option-card-option-selected-border bg-components-option-card-option-selected-bg text-text-primary',
-                      value.reranking_mode !== RerankingModeEnum.WeightedScore && option.value !== RerankingModeEnum.WeightedScore && 'border-[1.5px] border-components-option-card-option-selected-border bg-components-option-card-option-selected-bg text-text-primary',
+                    isChosen={value.reranking_mode === option.value}
+                    onChosen={() => handleChangeRerankMode(option.value)}
+                    icon={(
+                      <img
+                        src={
+                          option.value === RerankingModeEnum.WeightedScore
+                            ? ProgressIndicator.src
+                            : Reranking.src
+                        }
+                        alt=""
+                      />
                     )}
-                    onClick={() => handleChangeRerankMode(option.value)}
-                  >
-                    <div className='truncate'>{option.label}</div>
-                    <Tooltip
-                      popupContent={<div className='w-[200px]'>{option.tips}</div>}
-                      triggerClassName='ml-0.5 w-3.5 h-3.5'
-                    />
-                  </div>
+                    title={option.label}
+                    description={option.tips}
+                    className="flex-1"
+                  />
                 ))
               }
             </div>
@@ -238,11 +246,11 @@ const RetrievalParamConfig: FC<Props> = ({
                         ...value.weights!,
                         vector_setting: {
                           ...value.weights!.vector_setting,
-                          vector_weight: v.value[0],
+                          vector_weight: v.value[0]!,
                         },
                         keyword_setting: {
                           ...value.weights!.keyword_setting,
-                          keyword_weight: v.value[1],
+                          keyword_weight: v.value[1]!,
                         },
                       },
                     })
@@ -252,26 +260,37 @@ const RetrievalParamConfig: FC<Props> = ({
             }
             {
               value.reranking_mode !== RerankingModeEnum.WeightedScore && (
-                <ModelSelector
-                  triggerClassName={`${!value.reranking_enable && '!opacity-60 !cursor-not-allowed'}`}
-                  defaultModel={rerankModel && { provider: rerankModel.provider_name, model: rerankModel.model_name }}
-                  modelList={rerankModelList}
-                  readonly={!value.reranking_enable}
-                  onSelect={(v) => {
-                    onChange({
-                      ...value,
-                      reranking_model: {
-                        reranking_provider_name: v.provider,
-                        reranking_model_name: v.model,
-                      },
-                    })
-                  }}
-                />
+                <>
+                  <ModelSelector
+                    defaultModel={rerankModel && { provider: rerankModel.provider_name, model: rerankModel.model_name }}
+                    modelList={rerankModelList}
+                    onSelect={(v) => {
+                      onChange({
+                        ...value,
+                        reranking_model: {
+                          reranking_provider_name: v.provider,
+                          reranking_model_name: v.model,
+                        },
+                      })
+                    }}
+                  />
+                  {showMultiModalTip && (
+                    <div className="mt-2 flex h-10 items-center gap-x-0.5 overflow-hidden rounded-xl border-[0.5px] border-components-panel-border bg-components-panel-bg-blur p-2 shadow-xs backdrop-blur-[5px]">
+                      <div className="absolute top-0 right-0 bottom-0 left-0 bg-dataset-warning-message-bg opacity-40" />
+                      <div className="p-1">
+                        <AlertTriangle className="size-4 text-text-warning-secondary" />
+                      </div>
+                      <span className="system-xs-medium text-text-primary">
+                        {t('form.retrievalSetting.multiModalTip', { ns: 'datasetSettings' })}
+                      </span>
+                    </div>
+                  )}
+                </>
               )
             }
-            <div className={cn(!isEconomical && 'mt-4', 'flex space-between space-x-6')}>
+            <div className={cn(!isEconomical && 'mt-4', 'space-between flex space-x-6')}>
               <TopKItem
-                className='grow'
+                className="grow"
                 value={value.top_k}
                 onChange={(_key, v) => {
                   onChange({
@@ -282,7 +301,7 @@ const RetrievalParamConfig: FC<Props> = ({
                 enable={true}
               />
               <ScoreThresholdItem
-                className='grow'
+                className="grow"
                 value={value.score_threshold}
                 onChange={(_key, v) => {
                   onChange({

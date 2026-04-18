@@ -1,24 +1,17 @@
 'use client'
-import type { ChangeEvent, FC } from 'react'
-import React, { useState } from 'react'
-import data from '@emoji-mart/data'
 import type { EmojiMartData } from '@emoji-mart/data'
-import { init } from 'emoji-mart'
+import type { ChangeEvent, FC } from 'react'
+import data from '@emoji-mart/data'
 import {
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline'
-import cn from '@/utils/classnames'
+import { cn } from '@langgenius/dify-ui/cn'
+import { init } from 'emoji-mart'
+import * as React from 'react'
+import { useState } from 'react'
 import Divider from '@/app/components/base/divider'
+import Input from '@/app/components/base/input'
 import { searchEmoji } from '@/utils/emoji'
-
-declare global {
-  namespace JSX {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-    interface IntrinsicElements {
-      'em-emoji': React.DetailedHTMLProps< React.HTMLAttributes<HTMLElement>, HTMLElement >
-    }
-  }
-}
 
 init({ data })
 
@@ -58,114 +51,139 @@ const EmojiPickerInner: FC<IEmojiPickerInnerProps> = ({
   const { categories } = data as EmojiMartData
   const [selectedEmoji, setSelectedEmoji] = useState('')
   const [selectedBackground, setSelectedBackground] = useState(backgroundColors[0])
+  const [showStyleColors, setShowStyleColors] = useState(false)
 
   const [searchedEmojis, setSearchedEmojis] = useState<string[]>([])
   const [isSearching, setIsSearching] = useState(false)
 
   React.useEffect(() => {
-    if (selectedEmoji && selectedBackground)
-      onSelect?.(selectedEmoji, selectedBackground)
+    if (selectedEmoji) {
+      setShowStyleColors(true)
+      /* v8 ignore next 2 - @preserve */
+      if (selectedBackground)
+        onSelect?.(selectedEmoji, selectedBackground)
+    }
   }, [onSelect, selectedEmoji, selectedBackground])
 
-  return <div className={cn(className)}>
-    <div className='flex flex-col items-center w-full px-3'>
-      <div className="relative w-full">
-        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" aria-hidden="true" />
-        </div>
-        <input
-          type="search"
-          id="search"
-          className='block w-full h-10 px-3 pl-10 text-sm font-normal bg-gray-100 rounded-lg'
-          placeholder="Search emojis..."
-          onChange={async (e: ChangeEvent<HTMLInputElement>) => {
-            if (e.target.value === '') {
-              setIsSearching(false)
-            }
-            else {
-              setIsSearching(true)
-              const emojis = await searchEmoji(e.target.value)
-              setSearchedEmojis(emojis)
-            }
-          }}
-        />
-      </div>
-    </div>
-    <Divider className='m-0 mb-3' />
-
-    <div className="w-full max-h-[200px] overflow-x-hidden overflow-y-auto px-3">
-      {isSearching && <>
-        <div key={'category-search'} className='flex flex-col'>
-          <p className='font-medium uppercase text-xs text-[#101828] mb-1'>Search</p>
-          <div className='w-full h-full grid grid-cols-8 gap-1'>
-            {searchedEmojis.map((emoji: string, index: number) => {
-              return <div
-                key={`emoji-search-${index}`}
-                className='inline-flex w-10 h-10 rounded-lg items-center justify-center'
-                onClick={() => {
-                  setSelectedEmoji(emoji)
-                }}
-              >
-                <div className='cursor-pointer w-8 h-8 p-1 flex items-center justify-center rounded-lg hover:ring-1 ring-offset-1 ring-gray-300'>
-                  <em-emoji id={emoji} />
-                </div>
-              </div>
-            })}
+  return (
+    <div className={cn(className, 'flex flex-col')}>
+      <div className="flex w-full flex-col items-center px-3 pb-2">
+        <div className="relative w-full">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
+            <MagnifyingGlassIcon className="h-5 w-5 text-text-quaternary" aria-hidden="true" />
           </div>
-        </div>
-      </>}
-
-      {categories.map((category, index: number) => {
-        return <div key={`category-${index}`} className='flex flex-col'>
-          <p className='font-medium uppercase text-xs text-[#101828] mb-1'>{category.id}</p>
-          <div className='w-full h-full grid grid-cols-8 gap-1'>
-            {category.emojis.map((emoji, index: number) => {
-              return <div
-                key={`emoji-${index}`}
-                className='inline-flex w-10 h-10 rounded-lg items-center justify-center'
-                onClick={() => {
-                  setSelectedEmoji(emoji)
-                }}
-              >
-                <div className='cursor-pointer w-8 h-8 p-1 flex items-center justify-center rounded-lg hover:ring-1 ring-offset-1 ring-gray-300'>
-                  <em-emoji id={emoji} />
-                </div>
-              </div>
-            })}
-
-          </div>
-        </div>
-      })}
-    </div>
-
-    {/* Color Select */}
-    <div className={cn('p-3 pb-0', selectedEmoji === '' ? 'opacity-25' : '')}>
-      <p className='font-medium uppercase text-xs text-[#101828] mb-2'>Choose Style</p>
-      <div className='w-full h-full grid grid-cols-8 gap-1'>
-        {backgroundColors.map((color) => {
-          return <div
-            key={color}
-            className={
-              cn(
-                'cursor-pointer',
-                'hover:ring-1 ring-offset-1',
-                'inline-flex w-10 h-10 rounded-lg items-center justify-center',
-                color === selectedBackground ? 'ring-1 ring-gray-300' : '',
-              )}
-            onClick={() => {
-              setSelectedBackground(color)
+          <Input
+            className="pl-10"
+            type="search"
+            id="search"
+            placeholder="Search emojis..."
+            onChange={async (e: ChangeEvent<HTMLInputElement>) => {
+              if (e.target.value === '') {
+                setIsSearching(false)
+              }
+              else {
+                setIsSearching(true)
+                const emojis = await searchEmoji(e.target.value)
+                setSearchedEmojis(emojis)
+              }
             }}
-          >
-            <div className={cn(
-              'w-8 h-8 p-1 flex items-center justify-center rounded-lg',
-            )
-            } style={{ background: color }}>
-              {selectedEmoji !== '' && <em-emoji id={selectedEmoji} />}
+          />
+        </div>
+      </div>
+      <Divider className="my-3" />
+
+      <div className="max-h-[200px] w-full overflow-x-hidden overflow-y-auto px-3">
+        {isSearching && (
+          <>
+            <div key="category-search" className="flex flex-col">
+              <p className="mb-1 system-xs-medium-uppercase text-text-primary">Search</p>
+              <div className="grid h-full w-full grid-cols-8 gap-1">
+                {searchedEmojis.map((emoji: string, index: number) => {
+                  return (
+                    <div
+                      key={`emoji-search-${index}`}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg"
+                      onClick={() => {
+                        setSelectedEmoji(emoji)
+                      }}
+                    >
+                      <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg p-1 ring-components-input-border-hover ring-offset-1 hover:ring-1" data-testid={`emoji-search-result-${emoji}`}>
+                        <em-emoji id={emoji} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          </>
+        )}
+
+        {categories.map((category, index: number) => {
+          return (
+            <div key={`category-${index}`} className="flex flex-col">
+              <p className="mb-1 system-xs-medium-uppercase text-text-primary">{category.id}</p>
+              <div className="grid h-full w-full grid-cols-8 gap-1">
+                {category.emojis.map((emoji, index: number) => {
+                  return (
+                    <div
+                      key={`emoji-${index}`}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg"
+                      onClick={() => {
+                        setSelectedEmoji(emoji)
+                      }}
+                    >
+                      <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg p-1 ring-components-input-border-hover ring-offset-1 hover:ring-1" data-testid={`emoji-container-${emoji}`}>
+                        <em-emoji id={emoji} />
+                      </div>
+                    </div>
+                  )
+                })}
+
+              </div>
+            </div>
+          )
         })}
       </div>
+
+      {/* Color Select */}
+      <div className={cn('flex items-center justify-between p-3 pb-0')}>
+        <p className="mb-2 system-xs-medium-uppercase text-text-primary">Choose Style</p>
+        {showStyleColors
+          ? <span className="i-heroicons-chevron-down h-4 w-4 cursor-pointer text-text-quaternary" onClick={() => setShowStyleColors(!showStyleColors)} data-testid="toggle-colors" />
+          : <span className="i-heroicons-chevron-up h-4 w-4 cursor-pointer text-text-quaternary" onClick={() => setShowStyleColors(!showStyleColors)} data-testid="toggle-colors" />}
+      </div>
+      {showStyleColors && (
+        <div className="grid w-full grid-cols-8 gap-1 px-3">
+          {backgroundColors.map((color) => {
+            return (
+              <div
+                key={color}
+                className={
+                  cn(
+                    'cursor-pointer',
+                    'ring-offset-1 hover:ring-1',
+                    'inline-flex h-10 w-10 items-center justify-center rounded-lg',
+                    color === selectedBackground ? 'ring-1 ring-components-input-border-hover' : '',
+                  )
+                }
+                onClick={() => {
+                  setSelectedBackground(color)
+                }}
+              >
+                <div
+                  className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-lg p-1',
+                  )}
+                  style={{ background: color }}
+                >
+                  {selectedEmoji !== '' && <em-emoji id={selectedEmoji} />}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
-  </div>
+  )
 }
 export default EmojiPickerInner

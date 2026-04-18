@@ -1,16 +1,24 @@
 'use client'
 import type { FC } from 'react'
-import React, { useState } from 'react'
+import {
+  AlertDialog,
+  AlertDialogActions,
+  AlertDialogCancelButton,
+  AlertDialogConfirmButton,
+  AlertDialogContent,
+  AlertDialogTitle,
+} from '@langgenius/dify-ui/alert-dialog'
+import { toast } from '@langgenius/dify-ui/toast'
+import * as React from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import EditItem, { EditItemType } from './edit-item'
 import Drawer from '@/app/components/base/drawer-plus'
 import { MessageCheckRemove } from '@/app/components/base/icons/src/vender/line/communication'
-import Confirm from '@/app/components/base/confirm'
-import { addAnnotation, editAnnotation } from '@/service/annotation'
-import Toast from '@/app/components/base/toast'
-import { useProviderContext } from '@/context/provider-context'
 import AnnotationFull from '@/app/components/billing/annotation-full'
+import { useProviderContext } from '@/context/provider-context'
 import useTimestamp from '@/hooks/use-timestamp'
+import { addAnnotation, editAnnotation } from '@/service/annotation'
+import EditItem, { EditItemType } from './edit-item'
 
 type Props = {
   isShow: boolean
@@ -53,27 +61,33 @@ const EditAnnotationModal: FC<Props> = ({
       postQuery = editedContent
     else
       postAnswer = editedContent
-    if (!isAdd) {
-      await editAnnotation(appId, annotationId, {
-        message_id: messageId,
-        question: postQuery,
-        answer: postAnswer,
-      })
-      onEdited(postQuery, postAnswer)
-    }
-    else {
-      const res: any = await addAnnotation(appId, {
-        question: postQuery,
-        answer: postAnswer,
-        message_id: messageId,
-      })
-      onAdded(res.id, res.account?.name, postQuery, postAnswer)
-    }
+    try {
+      if (!isAdd) {
+        await editAnnotation(appId, annotationId, {
+          message_id: messageId,
+          question: postQuery,
+          answer: postAnswer,
+        })
+        onEdited(postQuery, postAnswer)
+      }
+      else {
+        const res = await addAnnotation(appId, {
+          question: postQuery,
+          answer: postAnswer,
+          message_id: messageId,
+        })
+        onAdded(res.id, res.account?.name ?? '', postQuery, postAnswer)
+      }
 
-    Toast.notify({
-      message: t('common.api.actionSuccess') as string,
-      type: 'success',
-    })
+      toast.success(t('api.actionSuccess', { ns: 'common' }) as string)
+    }
+    catch (error) {
+      const fallbackMessage = t('api.actionFailed', { ns: 'common' }) as string
+      const message = error instanceof Error && error.message ? error.message : fallbackMessage
+      toast.error(message)
+      // Re-throw to preserve edit mode behavior for UI components
+      throw error
+    }
   }
   const [showModal, setShowModal] = useState(false)
 
@@ -82,11 +96,11 @@ const EditAnnotationModal: FC<Props> = ({
       <Drawer
         isShow={isShow}
         onHide={onHide}
-        maxWidthClassName='!max-w-[480px]'
-        title={t('appAnnotation.editModal.title') as string}
+        maxWidthClassName="max-w-[480px]!"
+        title={t('editModal.title', { ns: 'appAnnotation' }) as string}
         body={(
           <div>
-            <div className='p-6 pb-4 space-y-6'>
+            <div className="space-y-6 p-6 pb-4">
               <EditItem
                 type={EditItemType.Query}
                 content={query}
@@ -99,23 +113,40 @@ const EditAnnotationModal: FC<Props> = ({
                 readonly={isAdd && isAnnotationFull}
                 onSave={editedContent => handleSave(EditItemType.Answer, editedContent)}
               />
-              <Confirm
-                isShow={showModal}
-                onCancel={() => setShowModal(false)}
-                onConfirm={() => {
-                  onRemove()
-                  setShowModal(false)
-                  onHide()
-                }}
-                title={t('appDebug.feature.annotation.removeConfirm')}
-              />
+              <AlertDialog open={showModal} onOpenChange={open => !open && setShowModal(false)}>
+                <AlertDialogContent>
+                  <div className="flex flex-col gap-2 px-6 pt-6 pb-4">
+                    <AlertDialogTitle
+                      title={t('feature.annotation.removeConfirm', { ns: 'appDebug' })}
+                      className="w-full truncate title-2xl-semi-bold text-text-primary"
+                    >
+                      {t('feature.annotation.removeConfirm', { ns: 'appDebug' })}
+                    </AlertDialogTitle>
+                  </div>
+                  <AlertDialogActions>
+                    <AlertDialogCancelButton>
+                      {t('operation.cancel', { ns: 'common' })}
+                    </AlertDialogCancelButton>
+                    <AlertDialogConfirmButton
+                      tone="destructive"
+                      onClick={() => {
+                        onRemove()
+                        setShowModal(false)
+                        onHide()
+                      }}
+                    >
+                      {t('operation.confirm', { ns: 'common' })}
+                    </AlertDialogConfirmButton>
+                  </AlertDialogActions>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         )}
-        foot={
+        foot={(
           <div>
             {isAnnotationFull && (
-              <div className='mt-6 mb-4 px-6'>
+              <div className="mt-6 mb-4 px-6">
                 <AnnotationFull />
               </div>
             )}
@@ -123,21 +154,27 @@ const EditAnnotationModal: FC<Props> = ({
             {
               annotationId
                 ? (
-                  <div className='px-4 flex h-16 items-center justify-between border-t border-black/5 bg-gray-50 rounded-bl-xl rounded-br-xl leading-[18px] text-[13px] font-medium text-gray-500'>
-                    <div
-                      className='flex items-center pl-3 space-x-2 cursor-pointer'
-                      onClick={() => setShowModal(true)}
-                    >
-                      <MessageCheckRemove />
-                      <div>{t('appAnnotation.editModal.removeThisCache')}</div>
+                    <div className="flex h-16 items-center justify-between rounded-br-xl rounded-bl-xl border-t border-divider-subtle bg-background-section-burn px-4 system-sm-medium text-text-tertiary">
+                      <div
+                        className="flex cursor-pointer items-center space-x-2 pl-3"
+                        onClick={() => setShowModal(true)}
+                      >
+                        <MessageCheckRemove />
+                        <div>{t('editModal.removeThisCache', { ns: 'appAnnotation' })}</div>
+                      </div>
+                      {!!createdAt && (
+                        <div>
+                          {t('editModal.createdAt', { ns: 'appAnnotation' })}
+&nbsp;
+                          {formatTime(createdAt, t('dateTimeFormat', { ns: 'appLog' }) as string)}
+                        </div>
+                      )}
                     </div>
-                    {createdAt && <div>{t('appAnnotation.editModal.createdAt')}&nbsp;{formatTime(createdAt, t('appLog.dateTimeFormat') as string)}</div>}
-                  </div>
-                )
+                  )
                 : undefined
             }
           </div>
-        }
+        )}
       />
     </div>
 

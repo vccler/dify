@@ -1,38 +1,51 @@
 import type { MouseEvent } from 'react'
+import { cn } from '@langgenius/dify-ui/cn'
 import {
-  memo,
-} from 'react'
-import { useTranslation } from 'react-i18next'
-import {
+  RiAspectRatioFill,
+  RiAspectRatioLine,
   RiCursorLine,
   RiFunctionAddLine,
   RiHand,
   RiStickyNoteAddLine,
 } from '@remixicon/react'
 import {
+  memo,
+} from 'react'
+import { useTranslation } from 'react-i18next'
+import { Comment } from '@/app/components/base/icons/src/public/other'
+import Divider from '../../base/divider'
+import {
   useNodesReadOnly,
+  useWorkflowCanvasMaximize,
   useWorkflowMoveMode,
   useWorkflowOrganize,
 } from '../hooks'
+import { useStore } from '../store'
 import {
   ControlMode,
 } from '../types'
-import { useStore } from '../store'
 import AddBlock from './add-block'
-import TipPopup from './tip-popup'
 import { useOperator } from './hooks'
-import cn from '@/utils/classnames'
+import MoreActions from './more-actions'
+import TipPopup from './tip-popup'
 
 const Control = () => {
   const { t } = useTranslation()
   const controlMode = useStore(s => s.controlMode)
-  const { handleModePointer, handleModeHand } = useWorkflowMoveMode()
+  const maximizeCanvas = useStore(s => s.maximizeCanvas)
+  const {
+    handleModePointer,
+    handleModeHand,
+    handleModeComment,
+    isCommentModeAvailable,
+  } = useWorkflowMoveMode()
   const { handleLayout } = useWorkflowOrganize()
   const { handleAddNote } = useOperator()
   const {
     nodesReadOnly,
     getNodesReadOnly,
   } = useNodesReadOnly()
+  const { handleToggleMaximizeCanvas } = useWorkflowCanvasMaximize()
 
   const addNote = (e: MouseEvent<HTMLDivElement>) => {
     if (getNodesReadOnly())
@@ -43,56 +56,84 @@ const Control = () => {
   }
 
   return (
-    <div className='flex items-center p-0.5 rounded-lg border-[0.5px] border-gray-100 bg-white shadow-lg text-gray-500'>
+    <div className="pointer-events-auto flex flex-col items-center rounded-lg border-[0.5px] border-components-actionbar-border bg-components-actionbar-bg p-0.5 text-text-tertiary shadow-lg">
       <AddBlock />
-      <TipPopup title={t('workflow.nodes.note.addNote')}>
+      <TipPopup title={t('nodes.note.addNote', { ns: 'workflow' })}>
         <div
           className={cn(
-            'flex items-center justify-center ml-[1px] w-8 h-8 rounded-lg hover:bg-black/5 hover:text-gray-700 cursor-pointer',
-            `${nodesReadOnly && '!cursor-not-allowed opacity-50'}`,
+            'ml-px flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-state-base-hover hover:text-text-secondary',
+            `${nodesReadOnly && 'cursor-not-allowed text-text-disabled hover:bg-transparent hover:text-text-disabled'}`,
           )}
           onClick={addNote}
         >
-          <RiStickyNoteAddLine className='w-4 h-4' />
+          <RiStickyNoteAddLine className="h-4 w-4" />
         </div>
       </TipPopup>
-      <div className='mx-[3px] w-[1px] h-3.5 bg-gray-200'></div>
-      <TipPopup title={t('workflow.common.pointerMode')} shortcuts={['v']}>
+      <Divider className="my-1 w-3.5" />
+      <TipPopup title={t('common.pointerMode', { ns: 'workflow' })} shortcuts={['v']}>
         <div
           className={cn(
-            'flex items-center justify-center mr-[1px] w-8 h-8 rounded-lg cursor-pointer',
-            controlMode === ControlMode.Pointer ? 'bg-primary-50 text-primary-600' : 'hover:bg-black/5 hover:text-gray-700',
-            `${nodesReadOnly && '!cursor-not-allowed opacity-50'}`,
+            'mr-px flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg',
+            controlMode === ControlMode.Pointer ? 'bg-state-accent-active text-text-accent' : 'hover:bg-state-base-hover hover:text-text-secondary',
+            `${nodesReadOnly && 'cursor-not-allowed text-text-disabled hover:bg-transparent hover:text-text-disabled'}`,
           )}
           onClick={handleModePointer}
         >
-          <RiCursorLine className='w-4 h-4' />
+          <RiCursorLine className="h-4 w-4" />
         </div>
       </TipPopup>
-      <TipPopup title={t('workflow.common.handMode')} shortcuts={['h']}>
+      <TipPopup title={t('common.handMode', { ns: 'workflow' })} shortcuts={['h']}>
         <div
           className={cn(
-            'flex items-center justify-center w-8 h-8 rounded-lg cursor-pointer',
-            controlMode === ControlMode.Hand ? 'bg-primary-50 text-primary-600' : 'hover:bg-black/5 hover:text-gray-700',
-            `${nodesReadOnly && '!cursor-not-allowed opacity-50'}`,
+            'flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg',
+            controlMode === ControlMode.Hand ? 'bg-state-accent-active text-text-accent' : 'hover:bg-state-base-hover hover:text-text-secondary',
+            `${nodesReadOnly && 'cursor-not-allowed text-text-disabled hover:bg-transparent hover:text-text-disabled'}`,
           )}
           onClick={handleModeHand}
         >
-          <RiHand className='w-4 h-4' />
+          <RiHand className="h-4 w-4" />
         </div>
       </TipPopup>
-      <div className='mx-[3px] w-[1px] h-3.5 bg-gray-200'></div>
-      <TipPopup title={t('workflow.panel.organizeBlocks')} shortcuts={['ctrl', 'o']}>
+      {isCommentModeAvailable && (
+        <TipPopup title={t('common.commentMode', { ns: 'workflow' })} shortcuts={['c']}>
+          <div
+            className={cn(
+              'ml-[1px] flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg',
+              controlMode === ControlMode.Comment ? 'bg-state-accent-active text-text-accent' : 'hover:bg-state-base-hover hover:text-text-secondary',
+              `${nodesReadOnly && 'cursor-not-allowed text-text-disabled hover:bg-transparent hover:text-text-disabled'}`,
+            )}
+            onClick={handleModeComment}
+          >
+            <Comment className="h-4 w-4" />
+          </div>
+        </TipPopup>
+      )}
+      <Divider className="my-1 w-3.5" />
+      <TipPopup title={t('panel.organizeBlocks', { ns: 'workflow' })} shortcuts={['ctrl', 'o']}>
         <div
           className={cn(
-            'flex items-center justify-center w-8 h-8 rounded-lg hover:bg-black/5 hover:text-gray-700 cursor-pointer',
-            `${nodesReadOnly && '!cursor-not-allowed opacity-50'}`,
+            'flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-state-base-hover hover:text-text-secondary',
+            `${nodesReadOnly && 'cursor-not-allowed text-text-disabled hover:bg-transparent hover:text-text-disabled'}`,
           )}
           onClick={handleLayout}
         >
-          <RiFunctionAddLine className='w-4 h-4' />
+          <RiFunctionAddLine className="h-4 w-4" />
         </div>
       </TipPopup>
+      <TipPopup title={maximizeCanvas ? t('panel.minimize', { ns: 'workflow' }) : t('panel.maximize', { ns: 'workflow' })} shortcuts={['f']}>
+        <div
+          className={cn(
+            'flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-state-base-hover hover:text-text-secondary',
+            maximizeCanvas ? 'bg-state-accent-active text-text-accent hover:text-text-accent' : 'hover:bg-state-base-hover hover:text-text-secondary',
+            `${nodesReadOnly && 'cursor-not-allowed text-text-disabled hover:bg-transparent hover:text-text-disabled'}`,
+          )}
+          onClick={handleToggleMaximizeCanvas}
+        >
+          {maximizeCanvas && <RiAspectRatioFill className="h-4 w-4" />}
+          {!maximizeCanvas && <RiAspectRatioLine className="h-4 w-4" />}
+        </div>
+      </TipPopup>
+      <MoreActions />
     </div>
   )
 }

@@ -32,7 +32,7 @@ class SupabaseStorage(BaseStorage):
         self.client.storage.from_(self.bucket_name).upload(filename, data)
 
     def load_once(self, filename: str) -> bytes:
-        content = self.client.storage.from_(self.bucket_name).download(filename)
+        content: bytes = self.client.storage.from_(self.bucket_name).download(filename)
         return content
 
     def load_stream(self, filename: str) -> Generator:
@@ -46,13 +46,13 @@ class SupabaseStorage(BaseStorage):
         Path(target_filepath).write_bytes(result)
 
     def exists(self, filename):
-        result = self.client.storage.from_(self.bucket_name).list(filename)
-        if result.count() > 0:
+        result = self.client.storage.from_(self.bucket_name).list(path=filename)
+        if len(result) > 0:
             return True
         return False
 
-    def delete(self, filename):
-        self.client.storage.from_(self.bucket_name).remove(filename)
+    def delete(self, filename: str):
+        self.client.storage.from_(self.bucket_name).remove([filename])
 
     def bucket_exists(self):
         buckets = self.client.storage.list_buckets()
